@@ -23,8 +23,8 @@ export function Navbar() {
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/movies', label: 'Movies' },
-    { to: '/tv', label: 'TV Shows' },
     { to: '/anime', label: 'Anime' },
+    { to: '/tv', label: 'TV Shows' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

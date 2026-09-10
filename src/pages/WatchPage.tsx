@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Settings, Maximize, Minimize, Star, Play, RefreshCw, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Settings, Maximize, Minimize, Star, Play, RefreshCw, CheckCircle2, ShieldCheck, Zap, FastForward, AlertTriangle, X } from 'lucide-react';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
 import { getProviders, getDefaultProvider, testServerConnectivity } from '../api/providers';
 import type { EmbedSource } from '../api/providers';
@@ -8,8 +8,18 @@ import type { EmbedSource } from '../api/providers';
 export function WatchPage() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [autoNext, setAutoNext] = useState(true);
+  const [showAdblockBanner, setShowAdblockBanner] = useState(() => {
+    return localStorage.getItem('hideAdblockBanner') !== 'true';
+  });
   const numericId = Number(id);
   const mediaType = type as 'movie' | 'tv';
+
+  const dismissAdblockBanner = () => {
+    setShowAdblockBanner(false);
+    localStorage.setItem('hideAdblockBanner', 'true');
+  };
 
   const season = Number(searchParams.get('s') || '1');
   const episode = Number(searchParams.get('e') || '1');
@@ -29,6 +39,37 @@ export function WatchPage() {
   );
 
   const title = mediaType === 'movie' ? movieQuery.data?.title : tvQuery.data?.name;
+
+  // Handle postMessage events for Auto Next (only supported on VidLink)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Check origin
+      if (event.origin !== 'https://vidlink.pro') return;
+
+      if (event.data && event.data.type === 'ended') {
+        if (autoNext && mediaType === 'tv' && seasonData && tvQuery.data) {
+          let nextSeason = season;
+          let nextEpisode = episode + 1;
+
+          if (nextEpisode > seasonData.episodes.length) {
+            const seasons = tvQuery.data.seasons.filter(s => s.season_number > 0);
+            const currentSeasonIndex = seasons.findIndex(s => s.season_number === season);
+            
+            if (currentSeasonIndex !== -1 && currentSeasonIndex < seasons.length - 1) {
+              nextSeason = seasons[currentSeasonIndex + 1].season_number;
+              nextEpisode = 1;
+            } else {
+              return;
+            }
+          }
+          navigate(`/watch/tv/${numericId}?s=${nextSeason}&e=${nextEpisode}`);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [autoNext, mediaType, season, episode, seasonData, tvQuery.data, numericId, navigate]);
 
   // Automated server check & auto-selection on mount
   useEffect(() => {
@@ -142,10 +183,32 @@ export function WatchPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-6 lg:flex lg:gap-8">
+      <div className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-6 flex flex-col lg:flex-row lg:gap-8">
         
         {/* Left Column: Video & Servers */}
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
+          
+          {/* Adblock Recommendation Banner */}
+          {showAdblockBanner && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-200/90 shadow-lg relative">
+              <AlertTriangle className="mt-0.5 flex-shrink-0 text-yellow-500" size={18} />
+              <div className="pr-6">
+                <strong className="text-yellow-500 font-semibold block mb-1">Recommendation: Use an Adblocker</strong>
+                <p>
+                  Because this site relies on free third-party streaming links, video players may contain pop-up ads when clicked. 
+                  For a clean, ad-free experience, we highly recommend installing the <strong className="text-white">uBlock Origin</strong> extension or using the <strong className="text-white">Brave Browser</strong>.
+                </p>
+              </div>
+              <button 
+                onClick={dismissAdblockBanner}
+                className="absolute top-3 right-3 p-1 text-yellow-500/70 hover:text-yellow-500 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Video Player */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black ring-1 ring-white/10 shadow-2xl">
             {isCheckingServers && (
@@ -234,6 +297,22 @@ export function WatchPage() {
                   <RefreshCw size={13} />
                   <span>Next Server</span>
                 </button>
+
+                {/* Auto Next Toggle (TV Only) */}
+                {mediaType === 'tv' && (
+                  <button
+                    onClick={() => setAutoNext(!autoNext)}
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                      autoNext
+                        ? 'border-gold/50 bg-gold/10 text-gold hover:bg-gold/20'
+                        : 'border-white/20 bg-white/5 text-text-muted hover:bg-white/10 hover:text-text-primary'
+                    }`}
+                    title={autoNext ? 'Auto Play Next Episode: ON' : 'Auto Play Next Episode: OFF'}
+                  >
+                    <FastForward size={13} />
+                    <span>Auto Next: {autoNext ? 'ON' : 'OFF'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -242,7 +321,7 @@ export function WatchPage() {
                 <strong className="text-text-secondary">Tip:</strong> The app automatically pings all servers on load and connects you to the fastest online host.
               </p>
               <p className="text-text-muted">
-                If playback stalls, tap <strong className="text-gold">Next Server</strong> to instantly switch stream sources.
+                <strong className="text-gold">Auto Next</strong> is supported on the VidLink server.
               </p>
             </div>
           </div>

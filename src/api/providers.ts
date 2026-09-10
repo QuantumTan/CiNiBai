@@ -15,8 +15,8 @@ const providers: EmbedSource[] = [
     id: 'vidlink',
     name: 'VidLink (Ultra Fast)',
     badge: 'Recommended',
-    getMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}`,
-    getTVUrl: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`,
+    getMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}?autoplay=1`,
+    getTVUrl: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?autoplay=1`,
   },
   {
     id: 'autoembed',
