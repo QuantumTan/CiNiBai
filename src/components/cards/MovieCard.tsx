@@ -18,13 +18,14 @@ export interface MovieCardProps {
     first_air_date?: string;
     media_type?: string;
   };
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'auto';
 }
 
 const sizeClasses = {
   sm: 'w-[140px]',
   md: 'w-[180px]',
   lg: 'w-[220px]',
+  auto: 'w-full',
 };
 
 export function MovieCard({ item, size = 'md' }: MovieCardProps) {

@@ -45,8 +45,8 @@ export function SearchPage() {
         )}
 
         {isLoading && (
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-            {Array.from({ length: 14 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {Array.from({ length: 12 }).map((_, i) => (
               <div key={i}>
                 <Skeleton className="aspect-[2/3] w-full rounded-xl" />
                 <Skeleton className="mt-2 h-4 w-3/4" />
@@ -67,9 +67,9 @@ export function SearchPage() {
             <p className="mb-6 text-sm text-text-muted">
               {data?.total_results} results for "{debouncedQuery}"
             </p>
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {results.map((item) => (
-                <MovieCard key={`${item.media_type}-${item.id}`} item={item as any} size="lg" />
+                <MovieCard key={`${item.media_type}-${item.id}`} item={item as any} size="auto" />
               ))}
             </div>
           </>

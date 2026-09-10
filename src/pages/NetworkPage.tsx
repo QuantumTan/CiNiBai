@@ -190,7 +190,7 @@ export function NetworkPage() {
               <MovieCard
                 key={item.id}
                 item={{ ...item, media_type: mediaType } as any}
-                size="md"
+                size="auto"
               />
             ))}
           </div>
