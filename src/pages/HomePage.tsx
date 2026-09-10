@@ -76,51 +76,61 @@ export function HomePage() {
           title="Trending This Week"
           items={trending?.results}
           isLoading={trendingLoading}
+          seeMoreLink="/movies"
         />
         <ContentRow
           title="Streaming on Netflix"
           items={netflix?.results}
           isLoading={netflixLoading}
+          seeMoreLink="/network/netflix"
         />
         <ContentRow
           title="Streaming on HBO Max"
           items={hbo?.results}
           isLoading={hboLoading}
+          seeMoreLink="/network/hbo"
         />
         <ContentRow
           title="Streaming on Prime Video"
           items={prime?.results}
           isLoading={primeLoading}
+          seeMoreLink="/network/prime"
         />
         <ContentRow
           title="Streaming on Disney+"
           items={disney?.results}
           isLoading={disneyLoading}
+          seeMoreLink="/network/disney"
         />
         <ContentRow
           title="Anime"
           items={anime?.results}
           isLoading={animeLoading}
+          seeMoreLink="/anime"
         />
         <ContentRow
           title="Streaming on Apple TV+"
           items={apple?.results}
           isLoading={appleLoading}
+          seeMoreLink="/network/apple"
         />
         <ContentRow
           title="Streaming on Hulu"
           items={hulu?.results}
           isLoading={huluLoading}
+          seeMoreLink="/network/hulu"
         />
         <ContentRow
           title="Popular Movies"
           items={popularMovies?.results}
           isLoading={popularMoviesLoading}
+          seeMoreLink="/movies"
         />
         <ContentRow
           title="In Theaters"
           items={nowPlaying?.results}
           isLoading={nowPlayingLoading}
+          seeMoreLink="/movies"
         />
       </div>
     </div>
