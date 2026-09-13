@@ -15,6 +15,7 @@ import { MovieCard } from '../components/cards/MovieCard';
 import { ScrollContainer } from '../components/ui/ScrollContainer';
 import { DetailPageSkeleton } from '../components/ui/Skeleton';
 import { useWatchlistStore } from '../store/watchlistStore';
+import { SEO } from '../components/common/SEO';
 import { useState } from 'react';
 
 interface DetailPageProps {
@@ -83,8 +84,41 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
   const director = credits?.crew.find((c) => c.job === 'Director');
 
+  // Schema.org structured data for Google
+  const schemaData = {
+    '@context': 'https://schema.org',
+    '@type': mediaType === 'movie' ? 'Movie' : 'TVSeries',
+    name: title,
+    description: overview,
+    image: poster ? getPosterUrl(poster, 'w500') : undefined,
+    datePublished: mediaType === 'movie' ? movie?.release_date : tv?.first_air_date,
+    genre: genres?.map((g) => g.name),
+    ...(rating ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: rating.toFixed(1),
+        bestRating: '10',
+        worstRating: '1',
+        ratingCount: mediaType === 'movie' ? movie?.vote_count : tv?.vote_count,
+      },
+    } : {}),
+    ...(director ? {
+      director: {
+        '@type': 'Person',
+        name: director.name,
+      },
+    } : {}),
+  };
+
   return (
     <div>
+      <SEO
+        title={`${title || 'Movie'} ${year ? `(${year})` : ''} - Watch Free Online`}
+        description={overview || `Watch ${title} online for free in HD on CineBai.`}
+        image={poster ? getPosterUrl(poster, 'w500') : undefined}
+        type={mediaType === 'movie' ? 'video.movie' : 'video.tv_show'}
+        schema={schemaData}
+      />
       {/* Backdrop Hero */}
       <div className="relative h-[70vh] min-h-[400px] w-full">
         <img

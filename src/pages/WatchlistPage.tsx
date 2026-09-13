@@ -5,6 +5,7 @@ import { getPosterUrl } from '../api/tmdb';
 import { getYear } from '../lib/utils';
 import { Rating } from '../components/ui/Rating';
 import { Button } from '../components/ui/Button';
+import { SEO } from '../components/common/SEO';
 import { useWatchlistStore } from '../store/watchlistStore';
 
 export function WatchlistPage() {
@@ -12,6 +13,10 @@ export function WatchlistPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-10 lg:px-8">
+      <SEO
+        title="My Watchlist - CineBai"
+        description="View and manage your saved movies and TV shows to watch later on CineBai."
+      />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-text-primary">My Watchlist</h1>

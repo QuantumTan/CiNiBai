@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows } from '../hooks/useTMDB';
 
 export function AnimePage() {
@@ -24,6 +25,10 @@ export function AnimePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-10 lg:px-8">
+      <SEO
+        title="Anime - Watch Free Japanese Anime Series & Movies"
+        description="Stream popular Japanese anime series, trending releases, and top-rated movies online for free in HD on CineBai."
+      />
       {/* Header */}
       <h1 className="text-3xl font-bold text-white mb-2">Anime</h1>
       <p className="text-sm text-text-muted mb-8">

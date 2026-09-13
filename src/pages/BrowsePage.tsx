@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { SEO } from '../components/common/SEO';
 import { useDiscoverMovies, useDiscoverTVShows, useMovieGenres, useTVGenres } from '../hooks/useTMDB';
 import type { DiscoverParams } from '../api/tmdb';
 import { cn } from '../lib/utils';
@@ -38,8 +39,14 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
     { value: 'primary_release_date.asc', label: 'Oldest' },
   ];
 
+  const pageTitle = mediaType === 'movie' ? 'Movies - Watch HD Movies Online' : 'TV Shows - Watch Full Series Online';
+  const pageDesc = mediaType === 'movie'
+    ? 'Browse and watch trending, top-rated, and newly released movies in HD for free on CineBai.'
+    : 'Discover and stream popular TV series, top-rated shows, and new episodes for free on CineBai.';
+
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-10 lg:px-8">
+      <SEO title={pageTitle} description={pageDesc} />
       {/* Header */}
       <h1 className="text-3xl font-bold text-text-primary mb-2">
         {mediaType === 'movie' ? 'Movies' : 'TV Shows'}

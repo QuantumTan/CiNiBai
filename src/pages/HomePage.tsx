@@ -1,6 +1,7 @@
 import { HeroBanner } from '../components/home/HeroBanner';
 import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
+import { SEO } from '../components/common/SEO';
 import {
   useTrending,
   useTrendingToday,
@@ -33,6 +34,10 @@ export function HomePage() {
 
   return (
     <div>
+      <SEO
+        title="CineBai - Watch Free Movies & TV Shows Online in HD"
+        description="Stream full movies, trending TV series, and anime for free in HD on CineBai with multiple fast streaming servers."
+      />
       {/* Hero Banner */}
       <HeroBanner items={heroItems} />
 

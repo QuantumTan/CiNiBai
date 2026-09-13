@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
 
 const NETWORKS: Record<string, { name: string; id: string; color: string; bgHover: string }> = {
@@ -90,6 +91,10 @@ export function NetworkPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-16 lg:px-8">
+      <SEO
+        title={`${networkData.name} - Watch Movies & Shows Online`}
+        description={`Stream the newest releases and top trending movies and TV series available on ${networkData.name} for free on CineBai.`}
+      />
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>

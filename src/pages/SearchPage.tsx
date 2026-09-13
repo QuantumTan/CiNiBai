@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { SEO } from '../components/common/SEO';
 import { useSearchMulti } from '../hooks/useTMDB';
 import { useDebounce } from '../hooks/useDebounce';
 import { MovieCard } from '../components/cards/MovieCard';
@@ -15,6 +16,10 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-24 pb-10 lg:px-8">
+      <SEO
+        title={debouncedQuery ? `Search: "${debouncedQuery}" - CineBai` : 'Search Movies & TV Series - CineBai'}
+        description="Search for movies, TV series, actors, and anime to watch online for free in HD on CineBai."
+      />
       {/* Search Input */}
       <div className="relative mx-auto max-w-2xl">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={22} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Settings, Maximize, Minimize, Star, Play, RefreshCw, CheckCircle2, ShieldCheck, Zap, FastForward, AlertTriangle, X } from 'lucide-react';
+import { SEO } from '../components/common/SEO';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
 import { getProviders, getDefaultProvider, testServerConnectivity } from '../api/providers';
 import type { EmbedSource } from '../api/providers';
@@ -146,6 +147,10 @@ export function WatchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-black">
+      <SEO
+        title={`Watch ${title || 'Streaming'} ${mediaType === 'tv' ? `(S${season}:E${episode})` : ''} Online Free`}
+        description={`Watch ${title} online for free in HD on CineBai.`}
+      />
       {/* Top Bar */}
       <div className="glass-dark flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-4">
