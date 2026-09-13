@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
 import { BrowsePage } from './pages/BrowsePage';
@@ -37,6 +38,7 @@ function App() {
           </Route>
           <Route path="/watch/:type/:id" element={<WatchPage />} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
     </QueryClientProvider>
   );
