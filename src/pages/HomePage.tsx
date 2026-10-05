@@ -131,10 +131,10 @@ export function HomePage() {
           </div>
 
           <div className="rail-fade-mask hide-scrollbar flex items-start gap-4 overflow-x-auto py-2">
-            {CURATED_REELS.map((drama) => (
+            {CURATED_REELS.slice(0, 24).map((drama) => (
               <Link
                 key={drama.id}
-                to="/reels"
+                to={`/reels?drama=${encodeURIComponent(drama.id)}`}
                 className="group relative flex-shrink-0 w-36 sm:w-44 outline-none select-none transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.03]"
               >
                 <div className="ios-card-glass relative aspect-[9/16] w-full overflow-hidden rounded-2xl shadow-xl">
