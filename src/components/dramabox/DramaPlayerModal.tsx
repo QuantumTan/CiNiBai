@@ -121,8 +121,12 @@ export function DramaPlayerModal() {
     }
 
     if (!videoUrl) {
-      // Stream URL missing from upstream
-      setStreamError('Stream is preparing. Tap "Refresh Stream" below.');
+      const availableEp = episodes.find((ep) => !!ep.video_url && ep.video_url.includes('.m3u8'));
+      if (availableEp && availableEp.episode_index !== activeModalEpisodeIndex) {
+        setStreamError(`Episode ${activeModalEpisodeIndex} stream is unavailable. Episode ${availableEp.episode_index} is available.`);
+      } else {
+        setStreamError('This episode stream is preparing on upstream. Tap "Refresh Stream" below.');
+      }
       return;
     }
 
@@ -397,19 +401,37 @@ export function DramaPlayerModal() {
 
             {/* Stream Error / Retry Overlay */}
             {streamError && activeEpisode?.is_unlocked && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/80 backdrop-blur-sm">
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/85 backdrop-blur-md">
                 <p className="type-meta text-white/88 mb-4 max-w-xs">{streamError}</p>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    loadDetail(true);
-                  }}
-                  className="px-5 py-2.5 rounded-full apple-glass-regular border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-white/10"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Refresh Stream</span>
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      loadDetail(true);
+                    }}
+                    className="px-5 py-2.5 rounded-full apple-glass-regular border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-white/10 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Refresh Stream</span>
+                  </button>
+                  {episodes.find((ep) => !!ep.video_url && ep.episode_index !== activeModalEpisodeIndex) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextWithStream = episodes.find((ep) => !!ep.video_url && ep.video_url.includes('.m3u8'));
+                        if (nextWithStream) {
+                          setActiveEpisodeIndex(nextWithStream.episode_index);
+                        }
+                      }}
+                      className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-2 transition-colors"
+                    >
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Play Available Episode</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

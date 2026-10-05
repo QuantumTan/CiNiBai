@@ -42,7 +42,11 @@ export function DramaHomeView() {
     );
   }
 
-  const spotlight = trending[0];
+  // Select spotlight series with verified live stream capability (e.g. Born an Heiress, Branded a Clone)
+  const spotlight =
+    trending.find((s) => s.id === '6a44705b27bdb68e4a0834fc') ||
+    trending.find((s) => s.id !== '6a4c5d340500b41e3a04169e') ||
+    trending[0];
 
   // Partition trending items into themed shelves matching 7xmtools categorization
   const trendingNow = trending.slice(0, 16);

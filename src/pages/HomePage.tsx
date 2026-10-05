@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, ChevronRight } from 'lucide-react';
 import { CinematicHero } from '../components/home/CinematicHero';
@@ -5,6 +6,8 @@ import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
 import { SEO } from '../components/common/SEO';
 import { CURATED_REELS } from '../api/reels';
+import { dramaboxApi } from '../lib/reels/dramaboxApi';
+import type { DramaSeries } from '../lib/reels/dramaboxTypes';
 import {
   useTrending,
   useTrendingToday,
@@ -31,6 +34,21 @@ export function HomePage() {
   const { data: hulu, isLoading: huluLoading } = useHuluOriginals();
   const { data: apple, isLoading: appleLoading } = useAppleTVOriginals();
   const { data: anime, isLoading: animeLoading } = useAnime();
+
+  // Real-time DramaBox trending series state with instant fallback to CURATED_REELS
+  const [liveDramas, setLiveDramas] = useState<DramaSeries[] | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+    dramaboxApi.getTrendingSeries().then((data) => {
+      if (isCurrent && data && data.length > 0) {
+        setLiveDramas(data);
+      }
+    }).catch(() => {});
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   // Use trending items with backdrops for the cinematic hero
   const heroItems = trending?.results.filter((item) => item.backdrop_path) || [];
@@ -131,7 +149,24 @@ export function HomePage() {
           </div>
 
           <div className="rail-fade-mask hide-scrollbar flex items-start gap-4 overflow-x-auto py-2">
-            {CURATED_REELS.slice(0, 24).map((drama) => (
+            {((liveDramas && liveDramas.length > 0)
+              ? liveDramas.slice(0, 24).map((d) => ({
+                  id: d.id,
+                  title: d.title,
+                  poster: d.cover_pic,
+                  episodes: d.chapter_count || 40,
+                  views: (d.read_count || 0) >= 1000000 ? `${((d.read_count || 0) / 1000000).toFixed(1)}M` : `${Math.floor((d.read_count || 500000) / 1000)}K`,
+                  platform: 'DramaBox',
+                }))
+              : CURATED_REELS.slice(0, 24).map((d) => ({
+                  id: d.id,
+                  title: d.title,
+                  poster: d.verticalPoster,
+                  episodes: d.totalEpisodes,
+                  views: d.views,
+                  platform: d.platform,
+                }))
+            ).map((drama) => (
               <Link
                 key={drama.id}
                 to={`/reels?drama=${encodeURIComponent(drama.id)}`}
@@ -139,7 +174,7 @@ export function HomePage() {
               >
                 <div className="ios-card-glass relative aspect-[9/16] w-full overflow-hidden rounded-2xl shadow-xl">
                   <img
-                    src={drama.verticalPoster}
+                    src={drama.poster}
                     alt={drama.title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
@@ -156,7 +191,7 @@ export function HomePage() {
                       {drama.title}
                     </p>
                     <div className="flex items-center justify-between text-[10px] text-slate-300 mt-1">
-                      <span>{drama.totalEpisodes} Eps</span>
+                      <span>{drama.episodes} Eps</span>
                       <span className="text-amber-300 font-semibold">{drama.views}</span>
                     </div>
                   </div>

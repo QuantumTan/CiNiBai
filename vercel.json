@@ -1,13 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/dramabox-proxy/(.*)",
-      "destination": "https://www.dramabox.com/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
 }
-
