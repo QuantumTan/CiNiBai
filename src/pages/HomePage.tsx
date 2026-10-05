@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { Flame, ChevronRight } from 'lucide-react';
 import { CinematicHero } from '../components/home/CinematicHero';
 import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
 import { SEO } from '../components/common/SEO';
+import { CURATED_REELS } from '../api/reels';
 import {
   useTrending,
   useTrendingToday,
@@ -107,6 +109,62 @@ export function HomePage() {
           items={trendingToday?.results}
           isLoading={trendingTodayLoading}
         />
+
+        {/* ReelShort & Micro-Dramas Showcase Rail */}
+        <section className="relative space-y-3.5 my-8">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <div className="apple-glass-thin flex h-7 w-7 items-center justify-center rounded-full text-amber-300 shadow-sm">
+                <Flame size={14} className="text-amber-400" />
+              </div>
+              <h2 className="tracking-tight-title text-xl font-bold text-white md:text-2xl">
+                ReelShort & Micro-Dramas
+              </h2>
+            </div>
+            <Link
+              to="/reels"
+              className="group flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-amber-300 hover:text-amber-200 transition-colors"
+            >
+              <span>Watch Reels</span>
+              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          <div className="rail-fade-mask hide-scrollbar flex items-start gap-4 overflow-x-auto py-2">
+            {CURATED_REELS.map((drama) => (
+              <Link
+                key={drama.id}
+                to="/reels"
+                className="group relative flex-shrink-0 w-36 sm:w-44 outline-none select-none transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.03]"
+              >
+                <div className="ios-card-glass relative aspect-[9/16] w-full overflow-hidden rounded-2xl shadow-xl">
+                  <img
+                    src={drama.verticalPoster}
+                    alt={drama.title}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                  {/* Platform Badge */}
+                  <span className="apple-glass-thin absolute top-2.5 left-2.5 rounded-full px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                    {drama.platform}
+                  </span>
+
+                  {/* Views & Episodes */}
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white">
+                    <p className="text-xs font-bold line-clamp-2 drop-shadow-md group-hover:text-amber-300 transition-colors">
+                      {drama.title}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-slate-300 mt-1">
+                      <span>{drama.totalEpisodes} Eps</span>
+                      <span className="text-amber-300 font-semibold">{drama.views}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <ContentRow
           title="Trending This Week"
