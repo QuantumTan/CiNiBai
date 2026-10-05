@@ -59,7 +59,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${
+      className={`md:hidden fixed top-0 left-0 right-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${
         scrolled
           ? 'apple-glass-regular border-b border-white/10 shadow-2xl'
           : 'bg-gradient-to-b from-black/90 via-black/40 to-transparent'
