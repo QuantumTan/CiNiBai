@@ -142,7 +142,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
       </div>
 
       {/* Content */}
-      <div className="relative -mt-48 z-10 mx-auto max-w-7xl px-4 lg:px-8">
+      <div className="relative -mt-48 z-10 mx-auto max-w-7xl px-4 lg:px-8 pb-40">
         <div className="flex flex-col gap-8 md:flex-row">
           {/* Poster */}
           <motion.div
@@ -262,78 +262,113 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
         {/* Seasons (TV only) */}
         {mediaType === 'tv' && tv?.seasons && tv.seasons.length > 0 && (
-          <section className="mt-12">
-            <h2 className="mb-4 text-xl font-bold text-white tracking-tight">Episodes</h2>
+          <section className="mt-14">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Episodes</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Select a season and episode to start watching</p>
+              </div>
 
-            {/* Season selector */}
-            <div className="mb-4 flex gap-2 overflow-x-auto hide-scrollbar">
-              {tv.seasons
-                .filter((s) => s.season_number > 0)
-                .map((season) => (
-                  <button
-                    key={season.id}
-                    onClick={() => setSelectedSeason(season.season_number)}
-                    className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
-                      selectedSeason === season.season_number
-                        ? 'ios-active-lens text-white shadow-md'
-                        : 'apple-glass-thin text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Season {season.season_number}
-                  </button>
-                ))}
+              {/* Season selector */}
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar p-1 rounded-full bg-white/[0.04] border border-white/10">
+                {tv.seasons
+                  .filter((s) => s.season_number > 0)
+                  .map((season) => (
+                    <button
+                      key={season.id}
+                      onClick={() => setSelectedSeason(season.season_number)}
+                      className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                        selectedSeason === season.season_number
+                          ? 'ios-active-lens text-white shadow-sm'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Season {season.season_number}
+                    </button>
+                  ))}
+              </div>
             </div>
 
             {/* Episode list */}
             {seasonData?.episodes && (
               <div className="space-y-3">
-                {seasonData.episodes.map((ep) => (
-                  <Link
-                    key={ep.id}
-                    to={`/watch/tv/${numericId}?s=${ep.season_number}&e=${ep.episode_number}`}
-                    className="apple-glass-thin group flex gap-4 rounded-2xl p-3.5 transition-all hover:bg-white/[0.08] hover:border-amber-400/40"
-                  >
-                    {/* Episode thumbnail */}
-                    <div className="relative flex-shrink-0 w-40 overflow-hidden rounded-xl bg-neutral-900 shadow-md">
-                      {ep.still_path ? (
-                        <img
-                          src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
-                          alt={ep.name}
-                          className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="aspect-video w-full bg-white/5 flex items-center justify-center">
-                          <Play size={24} className="text-slate-500" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40">
-                        <div className="rounded-full bg-white p-2.5 shadow-xl">
-                          <Play size={16} className="fill-black text-black" />
-                        </div>
-                      </div>
-                    </div>
+                {seasonData.episodes.map((ep) => {
+                  const fallbackImage = backdrop ? getBackdropUrl(backdrop, 'w780') : poster ? getPosterUrl(poster, 'w500') : null;
+                  const thumbnailSrc = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : fallbackImage;
 
-                    {/* Episode info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-white group-hover:text-amber-300 transition-colors">
-                        E{ep.episode_number}. {ep.name}
-                      </h3>
-                      {ep.overview && (
-                        <p className="mt-1 text-xs text-slate-400 line-clamp-2">{ep.overview}</p>
-                      )}
-                      <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
-                        {ep.runtime && <span>{ep.runtime}m</span>}
-                        {ep.air_date && <span>{ep.air_date}</span>}
-                        {ep.vote_average > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Star size={10} className="fill-amber-400 text-amber-400" /> {formatRating(ep.vote_average)}
-                          </span>
+                  return (
+                    <Link
+                      key={ep.id}
+                      to={`/watch/tv/${numericId}?s=${ep.season_number}&e=${ep.episode_number}`}
+                      className="group relative flex flex-col sm:flex-row gap-4 sm:items-center rounded-2xl p-3 sm:p-4 bg-white/[0.025] hover:bg-white/[0.07] border border-white/5 hover:border-white/20 transition-all duration-200"
+                    >
+                      {/* Episode Number (Desktop) */}
+                      <span className="hidden sm:block w-8 text-center text-xl font-bold text-slate-500 group-hover:text-amber-300 transition-colors flex-shrink-0">
+                        {ep.episode_number}
+                      </span>
+
+                      {/* Episode Thumbnail */}
+                      <div className="relative flex-shrink-0 w-full sm:w-48 md:w-56 aspect-video overflow-hidden rounded-xl bg-neutral-900 shadow-md ring-1 ring-white/10">
+                        {thumbnailSrc ? (
+                          <img
+                            src={thumbnailSrc}
+                            alt={ep.name}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-slate-900 flex items-center justify-center">
+                            <span className="text-xs font-bold text-slate-500">EP {ep.episode_number}</span>
+                          </div>
                         )}
+
+                        {/* Ambient Scrim */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+
+                        {/* Runtime Chip */}
+                        {ep.runtime ? (
+                          <span className="apple-glass-thin absolute bottom-2 right-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-slate-200">
+                            {ep.runtime}m
+                          </span>
+                        ) : null}
+
+                        {/* Hover Play Button */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[1px]">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-xl text-black">
+                            <Play size={16} className="fill-black ml-0.5" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+
+                      {/* Episode Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-amber-300 transition-colors">
+                            <span className="sm:hidden mr-1.5 text-slate-400 font-normal">{ep.episode_number}.</span>
+                            {ep.name}
+                          </h3>
+                          {ep.vote_average > 0 && (
+                            <span className="apple-glass-thin flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                              <Star size={11} className="fill-amber-400 text-amber-400" />
+                              {formatRating(ep.vote_average)}
+                            </span>
+                          )}
+                        </div>
+
+                        {ep.overview ? (
+                          <p className="mt-1.5 text-xs sm:text-sm text-slate-400 line-clamp-2 md:line-clamp-3 leading-relaxed">
+                            {ep.overview}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-2.5 flex items-center gap-3 text-xs text-slate-500 font-medium">
+                          {ep.air_date && <span>Aired: {ep.air_date}</span>}
+                          {ep.runtime && <span>• {ep.runtime} min</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </section>

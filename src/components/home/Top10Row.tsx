@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Skeleton } from '../ui/Skeleton';
 import { getPosterUrl } from '../../api/tmdb';
+import { getMediaDate, getYear, getMediaTitle, getMediaType } from '../../lib/utils';
 import type { TMDBMediaItem } from '../../api/tmdb.types';
 
 interface Top10RowProps {
@@ -87,35 +88,37 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
         >
           {isLoading
             ? Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex-shrink-0 flex items-end pl-12 md:pl-16">
-                  <div className="w-32 md:w-40">
+                <div key={i} className="flex-shrink-0 flex items-center pr-4">
+                  <div className="w-16 sm:w-20 md:w-24 h-48 sm:h-56 md:h-64" />
+                  <div className="-ml-6 sm:-ml-8 md:-ml-10 w-32 sm:w-36 md:w-44">
                     <Skeleton className="aspect-[2/3] w-full rounded-2xl" />
                   </div>
                 </div>
               ))
             : top10.map((item, index) => {
-                const mediaType = item.media_type || ('name' in item ? 'tv' : 'movie');
-                const itemTitle = 'title' in item ? item.title : item.name;
+                const mediaType = getMediaType(item);
+                const itemTitle = getMediaTitle(item);
+                const releaseYear = getYear(getMediaDate(item));
 
                 return (
                   <Link
                     key={item.id}
                     to={`/${mediaType}/${item.id}`}
-                    className="group/top10 relative flex-shrink-0 flex flex-col items-start pl-12 md:pl-16 outline-none select-none transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.03]"
+                    className="group/top10 relative flex-shrink-0 flex flex-col items-start outline-none select-none transition-transform duration-300 hover:-translate-y-2 hover:scale-[1.03] pr-2 sm:pr-4"
                   >
-                    <div className="relative flex items-end">
-                      {/* Apple Spatial Architectural Glass Numeral */}
+                    <div className="relative flex items-center">
+                      {/* Authentic Netflix-Style Massive Spatial Numeral */}
                       <div
-                        className="absolute left-0 bottom-0 z-0 flex items-baseline w-14 md:w-20 pointer-events-none select-none"
+                        className="relative z-0 flex items-center justify-end select-none pointer-events-none w-20 sm:w-24 md:w-28 h-48 sm:h-56 md:h-64 pr-1 sm:pr-2"
                         aria-hidden="true"
                       >
-                        <span className="spatial-rank-numeral text-[88px] md:text-[124px]">
+                        <span className="netflix-spatial-numeral text-[115px] sm:text-[145px] md:text-[180px]">
                           {index + 1}
                         </span>
                       </div>
 
-                      {/* Liquid Glass Card Container */}
-                      <div className="ios-card-glass relative z-10 w-32 md:w-40 aspect-[2/3] overflow-hidden rounded-2xl shadow-2xl">
+                      {/* Overlapping Apple Liquid Glass Poster Card */}
+                      <div className="ios-card-glass relative z-10 -ml-7 sm:-ml-9 md:-ml-12 w-32 sm:w-36 md:w-44 aspect-[2/3] overflow-hidden rounded-2xl shadow-2xl flex-shrink-0">
                         <img
                           src={getPosterUrl(item.poster_path, 'w500')}
                           alt={itemTitle}
@@ -134,17 +137,21 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                       </div>
                     </div>
 
-                    {/* Metadata Caption */}
-                    <div className="mt-2.5 w-32 md:w-40">
+                    {/* Metadata Caption directly under Poster */}
+                    <div className="mt-2.5 ml-14 sm:ml-16 md:ml-18 w-32 sm:w-36 md:w-44">
                       <h3 className="truncate text-xs font-semibold tracking-tight text-slate-100 group-hover/top10:text-amber-300 transition-colors">
                         {itemTitle}
                       </h3>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400">
-                        <span className="uppercase tracking-wider font-medium">
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400">
+                        <span className="uppercase text-[9px] tracking-wider font-semibold text-slate-300">
                           {mediaType === 'tv' ? 'Series' : 'Movie'}
                         </span>
-                        <span>•</span>
-                        <span className="text-amber-300 font-semibold">Top {index + 1}</span>
+                        {releaseYear && (
+                          <>
+                            <span className="h-0.5 w-0.5 rounded-full bg-slate-600" />
+                            <span>{releaseYear}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </Link>

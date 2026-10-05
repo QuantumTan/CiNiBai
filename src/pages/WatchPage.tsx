@@ -393,6 +393,9 @@ export function WatchPage() {
               <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
                 {seasonData.episodes.map((ep) => {
                   const isCurrent = ep.episode_number === episode;
+                  const seriesBackdrop = tvQuery.data?.backdrop_path ? getBackdropUrl(tvQuery.data.backdrop_path, 'w780') : null;
+                  const thumbSrc = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : seriesBackdrop;
+
                   return (
                     <Link
                       key={ep.id}
@@ -404,10 +407,12 @@ export function WatchPage() {
                       }`}
                     >
                       <div className="relative h-16 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-black/60 ring-1 ring-white/10">
-                        {ep.still_path ? (
-                          <img src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        {thumbSrc ? (
+                          <img src={thumbSrc} alt={ep.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs text-slate-500">No Image</div>
+                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-slate-500 bg-slate-900">
+                            EP {ep.episode_number}
+                          </div>
                         )}
                         {isCurrent && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
