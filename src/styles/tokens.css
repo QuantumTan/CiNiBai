@@ -1,0 +1,177 @@
+/**
+ * Apple Optical Material System - Design Tokens & Engine (§3)
+ * Implements Zero-Milkiness Vibrancy, Micro-Chamfered Rims, and Fresnel Glare.
+ */
+
+:root {
+  /* Obsidian Stage Hierarchy */
+  --obsidian-void: #060709;
+  --obsidian-surface: #0a0c10;
+  --obsidian-elevated: #11141b;
+
+  /* Spring Physics Timings */
+  --spring-duration-snappy: 0.28s;
+  --spring-duration-soft: 0.45s;
+
+  /* Optical Glass Baseline Tiers (§3.1) */
+  --glass-thin-bg: rgba(8, 10, 14, 0.25);
+  --glass-thin-blur: 20px;
+  --glass-thin-sat: 190%;
+  --glass-thin-contrast: 110%;
+
+  --glass-regular-bg: rgba(8, 10, 14, 0.45);
+  --glass-regular-blur: 32px;
+  --glass-regular-sat: 210%;
+  --glass-regular-contrast: 115%;
+
+  --glass-heavy-bg: rgba(8, 10, 14, 0.62);
+  --glass-heavy-blur: 48px;
+  --glass-heavy-sat: 220%;
+  --glass-heavy-contrast: 118%;
+
+  /* Micro-Chamfered Rim Shadows (§3.3) */
+  --chamfer-specular-top: inset 0 1px 1px 0 rgba(255, 255, 255, 0.38);
+  --chamfer-refraction-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --chamfer-ao-bottom: inset 0 -1px 1px 0 rgba(0, 0, 0, 0.55);
+  --chamfer-contact-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.65);
+
+  --chamfer-rim-stack: var(--chamfer-specular-top), var(--chamfer-refraction-ring), var(--chamfer-ao-bottom), var(--chamfer-contact-shadow);
+
+  /* Contact Elevation Preset (Pre-rendered for zero-paint opacity cross-fades) */
+  --elevation-hover-shadow: 0 28px 56px -12px rgba(0, 0, 0, 0.85);
+
+  /* Pointer Glare Default Position */
+  --pointer-x: 50%;
+  --pointer-y: 0%;
+}
+
+/* =========================================================================
+   3.1 & 3.2 ZERO-MILKINESS VIBRANCY ENGINE
+   ========================================================================= */
+
+.apple-glass-thin {
+  background: var(--glass-thin-bg);
+  backdrop-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-sat)) contrast(var(--glass-thin-contrast)) brightness(1.03);
+  -webkit-backdrop-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-sat)) contrast(var(--glass-thin-contrast)) brightness(1.03);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.apple-glass-regular {
+  background: var(--glass-regular-bg);
+  backdrop-filter: blur(var(--glass-regular-blur)) saturate(var(--glass-regular-sat)) contrast(var(--glass-regular-contrast)) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-regular-blur)) saturate(var(--glass-regular-sat)) contrast(var(--glass-regular-contrast)) brightness(1.04);
+  box-shadow: var(--chamfer-rim-stack);
+}
+
+.apple-glass-heavy {
+  background: var(--glass-heavy-bg);
+  backdrop-filter: blur(var(--glass-heavy-blur)) saturate(var(--glass-heavy-sat)) contrast(var(--glass-heavy-contrast)) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-heavy-blur)) saturate(var(--glass-heavy-sat)) contrast(var(--glass-heavy-contrast)) brightness(1.04);
+  box-shadow: 
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.7),
+    0 32px 64px -14px rgba(0, 0, 0, 0.85);
+}
+
+/* =========================================================================
+   3.4 CURSOR-COUPLED FRESNEL REFLECTION RIM
+   ========================================================================= */
+
+.fresnel-lens {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  background-image:
+    linear-gradient(to bottom, rgba(12, 14, 20, 0.65), rgba(8, 10, 14, 0.85)),
+    radial-gradient(circle 220px at var(--pointer-x) var(--pointer-y),
+                    rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.05) 55%, transparent 75%);
+  transition: background-image 0.1s ease-out;
+}
+
+/* Pre-rendered elevation shadow layer for 60fps zero-repaint transitions */
+.fresnel-lens::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--elevation-hover-shadow);
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.fresnel-lens:hover::before {
+  opacity: 1;
+}
+
+/* =========================================================================
+   3.6 OPTICAL EDGE REFRACTION LENS (Chromium Capable Tier A)
+   ========================================================================= */
+
+@supports (backdrop-filter: url(#apple-glass-refraction)) {
+  html[data-tier='a'] .apple-glass-regular.lens-refract,
+  html[data-tier='a'] .apple-glass-heavy.lens-refract {
+    backdrop-filter: url(#apple-glass-refraction) blur(32px) saturate(210%) contrast(115%);
+    -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(115%);
+  }
+}
+
+/* =========================================================================
+   3.7 ANTI-BANDING GRAIN TILE (Overlay Blend)
+   ========================================================================= */
+
+.apple-glass-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  z-index: 2;
+}
+
+/* =========================================================================
+   3.8 ACCESSIBILITY & WCAG 2.1 AA SCRIM
+   ========================================================================= */
+
+.glass-text-scrim {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 50%, transparent 100%);
+}
+
+/* High Contrast Mode (§3.8) */
+@media (prefers-contrast: more) {
+  :root {
+    --glass-regular-bg: rgba(8, 10, 14, 0.88);
+    --glass-heavy-bg: rgba(6, 8, 12, 0.95);
+  }
+  .apple-glass-regular,
+  .apple-glass-heavy {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+}
+
+/* Reduced Transparency Mode (§3.8) */
+@media (prefers-reduced-transparency: reduce) {
+  .apple-glass-thin,
+  .apple-glass-regular,
+  .apple-glass-heavy {
+    background: #0c0e14 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Focus Ring Baseline */
+:focus-visible {
+  outline: 2px solid rgba(229, 184, 105, 0.85);
+  outline-offset: 2px;
+}
