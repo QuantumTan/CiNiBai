@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
+@import './styles/apple-glass.css';
 
 @theme {
   --color-obsidian-void: #08080a;
