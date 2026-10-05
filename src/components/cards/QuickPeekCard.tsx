@@ -131,7 +131,7 @@ export function QuickPeekCard({
         className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-2xl"
         tabIndex={0}
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-md">
+        <div className="ios-card-glass relative aspect-[2/3] w-full overflow-hidden rounded-2xl shadow-xl">
           {/* Poster Image */}
           <img
             src={posterUrl}
@@ -145,8 +145,8 @@ export function QuickPeekCard({
 
           {/* Glass Rating Chip */}
           {item.vote_average > 0 && (
-            <div className="liquid-glass absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white">
-              <Star size={12} className="fill-amber-400 text-amber-400" />
+            <div className="apple-glass-thin absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white shadow-md">
+              <Star size={11} className="fill-amber-400 text-amber-400" />
               <span>{item.vote_average.toFixed(1)}</span>
             </div>
           )}
@@ -157,7 +157,7 @@ export function QuickPeekCard({
             className={`absolute top-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200 ${
               inWatchlist
                 ? 'bg-amber-400 text-black shadow-md'
-                : 'liquid-glass text-white opacity-0 group-hover:opacity-100'
+                : 'apple-glass-thin text-white opacity-0 group-hover:opacity-100'
             }`}
             aria-label={inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
           >
@@ -167,13 +167,13 @@ export function QuickPeekCard({
 
         {/* Minimal Title Label */}
         <div className="mt-2.5 px-0.5">
-          <h3 className="truncate text-xs font-semibold text-neutral-200 group-hover:text-amber-300 transition-colors">
+          <h3 className="truncate text-xs font-semibold text-slate-100 group-hover:text-amber-300 transition-colors">
             {title}
           </h3>
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-400">
+          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
             {year && <span>{year}</span>}
-            <span className="h-0.5 w-0.5 rounded-full bg-neutral-600" />
-            <span className="uppercase text-[10px] tracking-wider text-neutral-400 font-medium">
+            <span className="h-0.5 w-0.5 rounded-full bg-slate-600" />
+            <span className="uppercase text-[10px] tracking-wider text-slate-400 font-medium">
               {type === 'tv' ? 'Series' : 'Movie'}
             </span>
           </div>
@@ -188,7 +188,7 @@ export function QuickPeekCard({
             animate={{ opacity: 1, scale: 1.2, y: -20 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-            className="liquid-glass-elevated pointer-events-auto absolute top-0 left-[-10%] right-[-10%] z-50 overflow-hidden rounded-2xl shadow-2xl"
+            className="apple-glass-heavy pointer-events-auto absolute top-0 left-[-10%] right-[-10%] z-50 overflow-hidden rounded-2xl shadow-2xl"
             style={{ transformOrigin: 'center center' }}
           >
             {/* Header Teaser / Backdrop Section */}

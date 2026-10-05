@@ -105,6 +105,20 @@
     0 18px 40px -8px rgba(0, 0, 0, 0.8);
 }
 
+/* Apple Spatial Top 10 Rank Numeral */
+.spatial-rank-numeral {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(200, 215, 240, 0.45) 45%, rgba(40, 48, 65, 0.15) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.45);
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.95));
+  user-select: none;
+}
+
 /* Baseline Optical Material Classes */
 .apple-glass-thin {
   position: relative;

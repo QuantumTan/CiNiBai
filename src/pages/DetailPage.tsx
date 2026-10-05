@@ -201,7 +201,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                 {genres.map((g) => (
                   <span
                     key={g.id}
-                    className="glass rounded-full px-3 py-1 text-xs font-medium text-text-secondary"
+                    className="apple-glass-thin rounded-full px-3 py-1 text-xs font-semibold text-slate-300 shadow-sm"
                   >
                     {g.name}
                   </span>
@@ -210,36 +210,37 @@ export function DetailPage({ mediaType }: DetailPageProps) {
             )}
 
             {/* Overview */}
-            <p className="mt-6 max-w-2xl leading-relaxed text-text-secondary">
+            <p className="mt-6 max-w-2xl leading-relaxed text-slate-300">
               {overview}
             </p>
 
             {/* Director */}
             {director && (
-              <p className="mt-4 text-sm text-text-muted">
-                Directed by <span className="text-text-primary">{director.name}</span>
+              <p className="mt-4 text-sm text-slate-400">
+                Directed by <span className="text-white font-medium">{director.name}</span>
               </p>
             )}
 
             {/* Actions */}
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to={`/watch/${mediaType}/${numericId}`}>
-                <Button variant="gold" size="lg">
+                <Button variant="gold" size="lg" className="rounded-full px-8 py-3.5 font-bold shadow-xl">
                   <Play size={20} className="fill-current" /> Watch Now
                 </Button>
               </Link>
               {trailer && (
-                <Button variant="outline" size="lg" onClick={() => setShowTrailer(true)}>
+                <Button variant="outline" size="lg" onClick={() => setShowTrailer(true)} className="apple-glass-regular rounded-full px-6 py-3.5 font-semibold text-white shadow-lg hover:border-amber-400/50">
                   Watch Trailer
                 </Button>
               )}
               <button
                 onClick={toggleWatchlist}
-                className={`rounded-full p-3 transition-all duration-200 ${
+                className={`rounded-full p-3.5 transition-all duration-200 shadow-md ${
                   inWatchlist
-                    ? 'bg-gold text-black'
-                    : 'border border-white/20 text-white hover:bg-white/10'
+                    ? 'bg-amber-400 text-black shadow-[0_0_16px_rgba(251,191,36,0.4)]'
+                    : 'apple-glass-regular text-white hover:border-amber-400/50'
                 }`}
+                aria-label={inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
               >
                 {inWatchlist ? <Check size={20} /> : <Plus size={20} />}
               </button>
@@ -250,7 +251,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
         {/* Cast */}
         {credits?.cast && credits.cast.length > 0 && (
           <section className="mt-12">
-            <h2 className="mb-4 text-xl font-bold text-gold-gradient">Cast</h2>
+            <h2 className="mb-4 text-xl font-bold text-white tracking-tight">Top Cast</h2>
             <ScrollContainer>
               {credits.cast.slice(0, 20).map((member) => (
                 <CastCard key={member.id} member={member} />
@@ -262,7 +263,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
         {/* Seasons (TV only) */}
         {mediaType === 'tv' && tv?.seasons && tv.seasons.length > 0 && (
           <section className="mt-12">
-            <h2 className="mb-4 text-xl font-bold text-gold-gradient">Episodes</h2>
+            <h2 className="mb-4 text-xl font-bold text-white tracking-tight">Episodes</h2>
 
             {/* Season selector */}
             <div className="mb-4 flex gap-2 overflow-x-auto hide-scrollbar">
@@ -272,10 +273,10 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                   <button
                     key={season.id}
                     onClick={() => setSelectedSeason(season.season_number)}
-                    className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                    className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
                       selectedSeason === season.season_number
-                        ? 'bg-gold text-black'
-                        : 'glass text-text-secondary hover:text-text-primary'
+                        ? 'ios-active-lens text-white shadow-md'
+                        : 'apple-glass-thin text-slate-300 hover:text-white'
                     }`}
                   >
                     Season {season.season_number}
@@ -290,24 +291,24 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                   <Link
                     key={ep.id}
                     to={`/watch/tv/${numericId}?s=${ep.season_number}&e=${ep.episode_number}`}
-                    className="glass group flex gap-4 rounded-xl p-3 transition-all hover:bg-bg-card-hover"
+                    className="apple-glass-thin group flex gap-4 rounded-2xl p-3.5 transition-all hover:bg-white/[0.08] hover:border-amber-400/40"
                   >
                     {/* Episode thumbnail */}
-                    <div className="relative flex-shrink-0 w-40 overflow-hidden rounded-lg">
+                    <div className="relative flex-shrink-0 w-40 overflow-hidden rounded-xl bg-neutral-900 shadow-md">
                       {ep.still_path ? (
                         <img
                           src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
                           alt={ep.name}
-                          className="aspect-video w-full object-cover"
+                          className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
                       ) : (
                         <div className="aspect-video w-full bg-white/5 flex items-center justify-center">
-                          <Play size={24} className="text-text-muted" />
+                          <Play size={24} className="text-slate-500" />
                         </div>
                       )}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-                        <div className="rounded-full bg-gold p-2">
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40">
+                        <div className="rounded-full bg-white p-2.5 shadow-xl">
                           <Play size={16} className="fill-black text-black" />
                         </div>
                       </div>
@@ -315,18 +316,18 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
                     {/* Episode info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-text-primary group-hover:text-gold transition-colors">
+                      <h3 className="text-sm font-semibold text-white group-hover:text-amber-300 transition-colors">
                         E{ep.episode_number}. {ep.name}
                       </h3>
                       {ep.overview && (
-                        <p className="mt-1 text-xs text-text-muted line-clamp-2">{ep.overview}</p>
+                        <p className="mt-1 text-xs text-slate-400 line-clamp-2">{ep.overview}</p>
                       )}
-                      <div className="mt-2 flex items-center gap-3 text-xs text-text-muted">
+                      <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
                         {ep.runtime && <span>{ep.runtime}m</span>}
                         {ep.air_date && <span>{ep.air_date}</span>}
                         {ep.vote_average > 0 && (
                           <span className="flex items-center gap-1">
-                            <Star size={10} className="fill-gold text-gold" /> {formatRating(ep.vote_average)}
+                            <Star size={10} className="fill-amber-400 text-amber-400" /> {formatRating(ep.vote_average)}
                           </span>
                         )}
                       </div>

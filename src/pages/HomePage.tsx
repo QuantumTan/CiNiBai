@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { CinematicHero } from '../components/home/CinematicHero';
 import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
@@ -48,59 +49,59 @@ export function HomePage() {
           Premier Studios & Networks
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-          <a
-            href="/network/netflix"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          <Link
+            to="/network/netflix"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-red-500/40"
           >
             <span className="text-lg font-black tracking-wider text-[#E50914] group-hover:brightness-125 transition-all">
               NETFLIX
             </span>
-          </a>
-          <a
-            href="/network/hbo"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          </Link>
+          <Link
+            to="/network/hbo"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-purple-500/40"
           >
             <span className="text-lg font-black tracking-wider text-white group-hover:text-purple-300 transition-colors">
               HBO <span className="text-xs font-bold text-amber-300">MAX</span>
             </span>
-          </a>
-          <a
-            href="/network/prime"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          </Link>
+          <Link
+            to="/network/prime"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-blue-400/40"
           >
             <span className="text-base font-bold text-[#00A8E1] group-hover:brightness-125 transition-all">
               prime video
             </span>
-          </a>
-          <a
-            href="/network/disney"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          </Link>
+          <Link
+            to="/network/disney"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-blue-500/40"
           >
             <span className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors">
               Disney<span className="text-[#38bdf8]">+</span>
             </span>
-          </a>
-          <a
-            href="/network/hulu"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          </Link>
+          <Link
+            to="/network/hulu"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-emerald-500/40"
           >
             <span className="text-xl font-black tracking-tighter text-[#1CE783] group-hover:brightness-125 transition-all">
               hulu
             </span>
-          </a>
-          <a
-            href="/network/apple"
-            className="liquid-glass-control group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.03]"
+          </Link>
+          <Link
+            to="/network/apple"
+            className="apple-glass-regular group flex h-16 items-center justify-center rounded-2xl transition-all duration-300 hover:scale-[1.04] shadow-md hover:border-white/50"
           >
             <span className="text-base font-semibold text-slate-200 group-hover:text-white transition-colors">
                tv+
             </span>
-          </a>
+          </Link>
         </div>
       </div>
 
       {/* Curated Rails with Quick-Peek Interactions */}
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8 px-4 pt-8 pb-36 lg:px-8">
         <Top10Row
           title="Top 10 Trending Today"
           items={trendingToday?.results}

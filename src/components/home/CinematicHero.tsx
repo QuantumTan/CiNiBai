@@ -252,7 +252,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => navigate(`/${type}/${currentItem.id}`)}
-                className="liquid-glass-control flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                className="apple-glass-regular flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg hover:border-white/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 <Info size={18} strokeWidth={1.8} />
                 <span>Details</span>
@@ -266,7 +266,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
                 className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 ${
                   inWatchlist
                     ? 'bg-amber-400 text-black shadow-[0_0_16px_rgba(251,191,36,0.4)]'
-                    : 'liquid-glass-control text-white'
+                    : 'apple-glass-regular text-white'
                 }`}
                 aria-label={inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
                 title={inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
