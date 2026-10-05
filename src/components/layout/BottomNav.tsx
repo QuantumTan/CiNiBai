@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Film, Tv, Sparkles, Bookmark, Search } from 'lucide-react';
+import { Compass, Film, Tv, Sparkles, Bookmark, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useWatchlistStore } from '../../store/watchlistStore';
 
@@ -7,9 +7,9 @@ const navItems = [
   { to: '/', icon: Compass, label: 'Discover' },
   { to: '/movies', icon: Film, label: 'Movies' },
   { to: '/tv', icon: Tv, label: 'Series' },
+  { to: '/reels', icon: Flame, label: 'Reels' },
   { to: '/anime', icon: Sparkles, label: 'Anime' },
   { to: '/watchlist', icon: Bookmark, label: 'Watchlist' },
-  { to: '/search', icon: Search, label: 'Search' },
 ];
 
 export function BottomNav() {
