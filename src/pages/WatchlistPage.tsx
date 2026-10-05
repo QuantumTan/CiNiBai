@@ -1,91 +1,82 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bookmark, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getPosterUrl } from '../api/tmdb';
-import { getYear } from '../lib/utils';
-import { Rating } from '../components/ui/Rating';
+import { Bookmark } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
+import { MovieCard } from '../components/cards/MovieCard';
 import { useWatchlistStore } from '../store/watchlistStore';
+import { useAmbientCanvas } from '../context/AmbientCanvasContext';
+import { getPosterUrl } from '../api/tmdb';
 
 export function WatchlistPage() {
-  const { items, removeItem, clearWatchlist } = useWatchlistStore();
+  const { items, clearWatchlist } = useWatchlistStore();
+  const { extractAndSetAmbientColor } = useAmbientCanvas();
+
+  // Sample ambient color from first watchlist item
+  useEffect(() => {
+    if (items.length > 0 && items[0]?.posterPath) {
+      extractAndSetAmbientColor(getPosterUrl(items[0].posterPath, 'w500'));
+    }
+  }, [items, extractAndSetAmbientColor]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-24 pb-10 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-20 pb-36 lg:px-8">
       <SEO
         title="My Watchlist - CineBai"
         description="View and manage your saved movies and TV shows to watch later on CineBai."
       />
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">My Watchlist</h1>
-          <p className="mt-1 text-sm text-text-muted">{items.length} items saved</p>
+          <div className="apple-glass-thin inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold text-amber-300 mb-3 shadow-md">
+            <Bookmark size={13} className="text-amber-400" />
+            <span>Personal Collection</span>
+          </div>
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white">My Watchlist</h1>
+          <p className="mt-1 text-sm text-slate-400">{items.length} titles saved</p>
         </div>
         {items.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearWatchlist}>
+          <button 
+            onClick={clearWatchlist}
+            className="apple-glass-thin rounded-full px-4 py-2 text-xs font-semibold text-slate-300 hover:text-red-400 hover:border-red-400/40 transition-colors shadow-sm"
+          >
             Clear All
-          </Button>
+          </button>
         )}
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Bookmark size={64} className="text-text-muted mb-4" />
-          <p className="text-lg text-text-muted">Your watchlist is empty</p>
-          <p className="mt-2 text-sm text-text-muted">Browse movies and TV shows to add them here</p>
+        <div className="apple-glass-regular flex flex-col items-center justify-center py-20 rounded-3xl text-center px-4 max-w-md mx-auto my-12">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-white/10 mb-4">
+            <Bookmark size={32} className="text-slate-400" />
+          </div>
+          <p className="text-xl font-bold text-white">Your watchlist is empty</p>
+          <p className="mt-2 text-sm text-slate-400 max-w-xs">
+            Save movies and TV series to keep track of what you want to watch next.
+          </p>
           <Link to="/" className="mt-6">
-            <Button variant="gold">Browse Content</Button>
+            <Button variant="gold" className="rounded-full px-6 py-2.5 font-bold shadow-lg">
+              Explore Catalog
+            </Button>
           </Link>
         </div>
       ) : (
-        <AnimatePresence>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {items.map((item) => (
-              <motion.div
-                key={`${item.type}-${item.id}`}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Link to={`/${item.type}/${item.id}`} className="group block">
-                  <div className="relative overflow-hidden rounded-xl">
-                    <img
-                      src={getPosterUrl(item.posterPath, 'w342')}
-                      alt={item.title}
-                      className="aspect-[2/3] w-full object-cover transition-all group-hover:brightness-110"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-
-                    {/* Remove button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        removeItem(item.id, item.type);
-                      }}
-                      className="absolute top-2 right-2 rounded-full bg-red-500/80 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500"
-                      aria-label="Remove from watchlist"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-
-                    <div className="absolute bottom-2 left-2">
-                      <Rating value={item.voteAverage} size="sm" showLabel={false} />
-                    </div>
-                  </div>
-                  <h3 className="mt-2 truncate text-sm font-medium text-text-primary">{item.title}</h3>
-                  <p className="text-xs text-text-muted">
-                    {getYear(item.releaseDate)} -- {item.type === 'tv' ? 'TV' : 'Movie'}
-                  </p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </AnimatePresence>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {items.map((item) => (
+            <MovieCard
+              key={`${item.type}-${item.id}`}
+              item={{
+                id: item.id,
+                title: item.title,
+                poster_path: item.posterPath,
+                vote_average: item.voteAverage,
+                release_date: item.releaseDate,
+                media_type: item.type,
+              } as any}
+              size="auto"
+            />
+          ))}
+        </div>
       )}
     </div>
   );

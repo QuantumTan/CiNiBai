@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Play, Plus, Check, Calendar, Clock, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,7 +17,7 @@ import { ScrollContainer } from '../components/ui/ScrollContainer';
 import { DetailPageSkeleton } from '../components/ui/Skeleton';
 import { useWatchlistStore } from '../store/watchlistStore';
 import { SEO } from '../components/common/SEO';
-import { useState } from 'react';
+import { useAmbientCanvas } from '../context/AmbientCanvasContext';
 
 interface DetailPageProps {
   mediaType: 'movie' | 'tv';
@@ -42,14 +43,24 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
 
   const [showTrailer, setShowTrailer] = useState(false);
+  const { extractAndSetAmbientColor } = useAmbientCanvas();
+
+  const backdrop = (mediaType === 'movie' ? movie?.backdrop_path : tv?.backdrop_path) ?? null;
+  const poster = (mediaType === 'movie' ? movie?.poster_path : tv?.poster_path) ?? null;
+
+  // Dynamically sample dominant palette from media artwork
+  useEffect(() => {
+    const backdropUrl = backdrop ? getBackdropUrl(backdrop, 'w780') : (poster ? getPosterUrl(poster, 'w500') : null);
+    if (backdropUrl) {
+      extractAndSetAmbientColor(backdropUrl);
+    }
+  }, [backdrop, poster, extractAndSetAmbientColor]);
 
   if (isLoading) return <DetailPageSkeleton />;
 
   // Determine data based on media type
   const title = mediaType === 'movie' ? movie?.title : tv?.name;
   const overview = mediaType === 'movie' ? movie?.overview : tv?.overview;
-  const backdrop = (mediaType === 'movie' ? movie?.backdrop_path : tv?.backdrop_path) ?? null;
-  const poster = (mediaType === 'movie' ? movie?.poster_path : tv?.poster_path) ?? null;
   const rating = mediaType === 'movie' ? movie?.vote_average : tv?.vote_average;
   const year = mediaType === 'movie' ? getYear(movie?.release_date) : getYear(tv?.first_air_date);
   const genres = mediaType === 'movie' ? movie?.genres : tv?.genres;
@@ -329,7 +340,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
         {/* Similar */}
         {similar?.results && similar.results.length > 0 && (
-          <section className="mt-12 pb-10">
+          <section className="mt-12 pb-36">
             <h2 className="mb-4 text-xl font-bold text-gold-gradient">Similar Titles</h2>
             <ScrollContainer>
               {similar.results.map((item) => (

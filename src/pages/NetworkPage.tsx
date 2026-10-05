@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
+import { useAmbientCanvas } from '../context/AmbientCanvasContext';
 
 const NETWORKS: Record<string, { name: string; id: string; color: string; bgHover: string }> = {
   netflix: { name: 'Netflix', id: '8', color: 'text-[#E50914]', bgHover: 'hover:border-[#E50914]/50' },
@@ -24,9 +25,26 @@ const defaultRecentDateStr = recentDate.toISOString().split('T')[0];
 export function NetworkPage() {
   const { network } = useParams<{ network: string }>();
   const networkData = network ? NETWORKS[network.toLowerCase()] : null;
+  const { setAmbientColor } = useAmbientCanvas();
 
   const [mediaType, setMediaType] = useState<'tv' | 'movie'>('tv');
   const [sortOption, setSortOption] = useState<'latest_popular' | 'newest' | 'top_rated' | 'all_time'>('latest_popular');
+
+  // Activate network signature atmospheric illumination
+  useEffect(() => {
+    const networkColors: Record<string, { r: number; g: number; b: number }> = {
+      netflix: { r: 229, g: 9, b: 20 },
+      prime: { r: 0, g: 168, b: 225 },
+      disney: { r: 48, g: 112, b: 247 },
+      apple: { r: 200, g: 205, b: 215 },
+      hulu: { r: 28, g: 231, b: 131 },
+      hbo: { r: 153, g: 0, b: 255 },
+      max: { r: 0, g: 43, b: 231 },
+    };
+    if (network && networkColors[network.toLowerCase()]) {
+      setAmbientColor(networkColors[network.toLowerCase()]);
+    }
+  }, [network, setAmbientColor]);
 
   // Compute query params based on selected filters
   const getQueryParams = () => {
@@ -90,7 +108,7 @@ export function NetworkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-24 pb-16 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-20 pb-36 lg:px-8">
       <SEO
         title={`${networkData.name} - Watch Movies & Shows Online`}
         description={`Stream the newest releases and top trending movies and TV series available on ${networkData.name} for free on CineBai.`}
@@ -99,36 +117,36 @@ export function NetworkPage() {
       <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <span className={`text-4xl font-black tracking-tight ${networkData.color}`}>
+            <span className={`text-4xl md:text-5xl font-black tracking-tight ${networkData.color}`}>
               {networkData.name}
             </span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gold">
-              Latest & Trending
+            <span className="apple-glass-thin rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300 shadow-md">
+              Featured Studio
             </span>
           </div>
-          <p className="mt-2 text-sm text-text-secondary">
-            Browse the newest releases and top trending titles available on {networkData.name}
+          <p className="mt-2 text-sm md:text-base text-slate-300">
+            Browse the newest releases and premier titles available on {networkData.name}
           </p>
         </div>
 
         {/* Media Type Tabs */}
-        <div className="flex items-center gap-2 rounded-xl bg-white/5 p-1 ring-1 ring-white/10">
+        <div className="flex items-center gap-1.5 p-1 rounded-full apple-glass-thin">
           <button
             onClick={() => setMediaType('tv')}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
               mediaType === 'tv'
-                ? 'bg-gold text-black shadow-md'
-                : 'text-text-secondary hover:text-white'
+                ? 'ios-active-lens text-white shadow-md'
+                : 'text-slate-300 hover:text-white'
             }`}
           >
             TV Series
           </button>
           <button
             onClick={() => setMediaType('movie')}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
               mediaType === 'movie'
-                ? 'bg-gold text-black shadow-md'
-                : 'text-text-secondary hover:text-white'
+                ? 'ios-active-lens text-white shadow-md'
+                : 'text-slate-300 hover:text-white'
             }`}
           >
             Movies
@@ -139,7 +157,7 @@ export function NetworkPage() {
       {/* Filter Controls Bar */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Sort By:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Sort By:</span>
           <div className="flex flex-wrap gap-2">
             {[
               { id: 'latest_popular', label: 'Latest Hits' },
@@ -150,10 +168,10 @@ export function NetworkPage() {
               <button
                 key={sort.id}
                 onClick={() => setSortOption(sort.id as any)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   sortOption === sort.id
-                    ? 'bg-white/20 text-gold ring-1 ring-gold/40'
-                    : 'bg-white/5 text-text-muted hover:bg-white/10 hover:text-text-primary ring-1 ring-white/5'
+                    ? 'ios-active-lens text-white shadow-md'
+                    : 'apple-glass-thin text-slate-300 hover:text-white'
                 }`}
               >
                 {sort.label}
@@ -162,7 +180,7 @@ export function NetworkPage() {
           </div>
         </div>
 
-        <span className="text-xs text-text-muted">
+        <span className="text-xs text-slate-400 font-medium">
           Showing {allItems.length} titles
         </span>
       </div>
@@ -180,10 +198,10 @@ export function NetworkPage() {
         </div>
       ) : allItems.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-lg text-text-secondary">No titles found for this filter combination.</p>
+          <p className="text-lg text-slate-300">No titles found for this filter combination.</p>
           <button
             onClick={() => setSortOption('all_time')}
-            className="mt-4 rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-black"
+            className="apple-glass-regular mt-4 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:border-amber-400/50 transition-all"
           >
             Show All-Time Titles
           </button>
@@ -207,7 +225,7 @@ export function NetworkPage() {
                 variant="outline"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                className="px-8"
+                className="apple-glass-regular px-8 py-3 rounded-full text-sm font-semibold text-white hover:border-amber-400/50 transition-all"
               >
                 {isFetchingNextPage ? 'Loading more...' : 'Load More Titles'}
               </Button>
