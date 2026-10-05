@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
+import { AmbientCanvasProvider } from './context/AmbientCanvasContext';
 import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
 import { BrowsePage } from './pages/BrowsePage';
@@ -23,23 +24,25 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/movies" element={<BrowsePage mediaType="movie" />} />
-            <Route path="/tv" element={<BrowsePage mediaType="tv" />} />
-            <Route path="/movie/:id" element={<DetailPage mediaType="movie" />} />
-            <Route path="/tv/:id" element={<DetailPage mediaType="tv" />} />
-            <Route path="/anime" element={<AnimePage />} />
-            <Route path="/network/:network" element={<NetworkPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/watchlist" element={<WatchlistPage />} />
-          </Route>
-          <Route path="/watch/:type/:id" element={<WatchPage />} />
-        </Routes>
-        <Analytics />
-      </BrowserRouter>
+      <AmbientCanvasProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/movies" element={<BrowsePage mediaType="movie" />} />
+              <Route path="/tv" element={<BrowsePage mediaType="tv" />} />
+              <Route path="/movie/:id" element={<DetailPage mediaType="movie" />} />
+              <Route path="/tv/:id" element={<DetailPage mediaType="tv" />} />
+              <Route path="/anime" element={<AnimePage />} />
+              <Route path="/network/:network" element={<NetworkPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/watchlist" element={<WatchlistPage />} />
+            </Route>
+            <Route path="/watch/:type/:id" element={<WatchPage />} />
+          </Routes>
+          <Analytics />
+        </BrowserRouter>
+      </AmbientCanvasProvider>
     </QueryClientProvider>
   );
 }

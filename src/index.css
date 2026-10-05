@@ -1,58 +1,76 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #111111;
-  --color-bg-card: rgba(255, 255, 255, 0.05);
+  --color-obsidian-void: #08080a;
+  --color-obsidian-surface: #0e0e12;
+  --color-obsidian-elevated: #16161d;
+  --color-obsidian-panel: rgba(18, 18, 24, 0.55);
+
+  --color-bg-primary: #08080a;
+  --color-bg-secondary: #0e0e12;
+  --color-bg-card: rgba(255, 255, 255, 0.04);
   --color-bg-card-hover: rgba(255, 255, 255, 0.08);
 
-  --color-gold: #c9a44c;
-  --color-gold-light: #e0c575;
-  --color-gold-dark: #a88832;
+  --color-gold: #e5b869;
+  --color-gold-light: #f5d38c;
+  --color-gold-dark: #b88a38;
 
-  --color-text-primary: #f5f5f5;
-  --color-text-secondary: #a0a0a0;
-  --color-text-muted: #666666;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #8892b0;
 
-  --color-glass-border: rgba(255, 255, 255, 0.1);
-  --color-glass-bg: rgba(0, 0, 0, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.09);
+  --color-glass-bg: rgba(14, 14, 20, 0.72);
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Geist', system-ui, sans-serif;
 }
 
 /* Base styles */
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #0a0a0a;
-  color: #f5f5f5;
+  background-color: #08080a;
+  color: #f8fafc;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Film grain noise overlay to eliminate 8-bit digital banding */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.75;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111111;
+  background: #08080a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333333;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c9a44c;
+  background: rgba(229, 184, 105, 0.6);
 }
 
 /* Hide scrollbar for horizontal carousels */
@@ -64,25 +82,156 @@ body {
   display: none;
 }
 
-/* Glassmorphism utility */
+/* =========================================================================
+   LIQUID GLASS MATERIAL SYSTEM (Apple visionOS / iOS Inspired)
+   ========================================================================= */
+
+/* Standard Mid-Layer Fluid Glass */
+.liquid-glass {
+  position: relative;
+  background: 
+    linear-gradient(rgba(20, 20, 28, 0.65), rgba(12, 12, 18, 0.75)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0.12) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 16px 0 rgba(255, 255, 255, 0.02),
+    0 12px 32px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Elevated High-Refraction Active Glass (Modals, Quick-Peek Cards, Floating Menus) */
+.liquid-glass-elevated {
+  position: relative;
+  background: 
+    linear-gradient(rgba(26, 26, 38, 0.85), rgba(14, 14, 22, 0.92)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.2) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 24px 0 rgba(255, 255, 255, 0.04),
+    0 24px 50px -12px rgba(0, 0, 0, 0.85),
+    0 0 30px -10px rgba(255, 255, 255, 0.07);
+}
+
+/* Floating Navigation Dock Glass */
+.liquid-glass-dock {
+  position: relative;
+  background: 
+    linear-gradient(rgba(18, 18, 26, 0.72), rgba(10, 10, 16, 0.84)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.15) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.28),
+    0 20px 45px -10px rgba(0, 0, 0, 0.75),
+    0 4px 12px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Liquid Interactive Control (Buttons, Pills, Chips) */
+.liquid-glass-control {
+  position: relative;
+  background: 
+    linear-gradient(rgba(35, 35, 48, 0.6), rgba(20, 20, 30, 0.75)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.16) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.22),
+    0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-control:hover {
+  background: 
+    linear-gradient(rgba(48, 48, 66, 0.8), rgba(28, 28, 42, 0.9)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.28) 100%) border-box;
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.4),
+    0 8px 24px -4px rgba(0, 0, 0, 0.7),
+    0 0 15px -2px rgba(255, 255, 255, 0.12);
+}
+
+/* Ultra-subtle mid-layer container shelves */
+.liquid-shelf {
+  background: rgba(18, 18, 24, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Legacy compatibility classes mapped to liquid glass */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  background: 
+    linear-gradient(rgba(22, 22, 32, 0.65), rgba(14, 14, 20, 0.75)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.1) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .glass-dark {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  background: 
+    linear-gradient(rgba(14, 14, 20, 0.8), rgba(8, 8, 12, 0.9)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0.08) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Gold gradient text */
 .text-gold-gradient {
-  background: linear-gradient(135deg, #e0c575, #c9a44c, #a88832);
+  background: linear-gradient(135deg, #f5d38c 0%, #e5b869 50%, #b88a38 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Refined Typography Optical Tracking */
+.tracking-tight-title {
+  letter-spacing: -0.035em;
+}
+
+.tracking-wide-caps {
+  letter-spacing: 0.07em;
+}
+
+/* Masks */
+.cinematic-vignette {
+  mask-image: radial-gradient(ellipse 95% 75% at 50% 35%, black 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 95% 75% at 50% 35%, black 45%, transparent 100%);
+}
+
+.rail-fade-mask {
+  mask-image: linear-gradient(to right, transparent, black 3.5%, black 96.5%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 3.5%, black 96.5%, transparent);
+}
+
+/* Shimmer placeholder with subtle ambient tinting */
+@keyframes ambientShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.ambient-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: #111117;
+}
+
+.ambient-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), rgba(229, 184, 105, 0.07), transparent);
+  animation: ambientShimmer 2.2s infinite ease-in-out;
 }
