@@ -149,7 +149,7 @@ export const INITIAL_REELS_CATALOG: Reel[] = [
       liked: false,
       saved: false,
     },
-    dialogueQuote: 'Identical twins swapped at high society ball—one takes the boardroom, the other the wilderness.',
+    dialogueQuote: 'Identical twins swapped at high society ball; one takes the boardroom, the other the wilderness.',
     tags: ['Twin Swap', 'Billionaire', 'Secrets', 'DramaBox'],
   },
   {
