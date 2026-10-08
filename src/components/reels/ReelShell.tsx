@@ -3,7 +3,8 @@
  * Implements the 9:16 Ultra-HD stage, non-9:16 blurred backdrop letterbox,
  * poster/video cross-fade, single/double tap gestures, and HUD anchors.
  */
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Heart, LoaderCircle, Play } from 'lucide-react';
 import type { Reel } from '../../lib/reels/types';
 import { ReelContextHUD } from './ReelContextHUD';
 import { ReelActionDock } from './ReelActionDock';
@@ -12,11 +13,11 @@ import { useReelsStore } from '../../stores/reels';
 interface ReelShellProps {
   reel: Reel;
   index: number;
+  heightPx: number;
   isActive: boolean;
   videoElementNode?: React.ReactNode;
   isFirstFrameReady?: boolean;
   onOpenDiscussion: () => void;
-  onActorClick: (name: string) => void;
   currentTime: number;
   duration: number;
   onSeek: (seconds: number) => void;
@@ -25,11 +26,11 @@ interface ReelShellProps {
 export function ReelShell({
   reel,
   index,
+  heightPx,
   isActive,
   videoElementNode,
   isFirstFrameReady = false,
   onOpenDiscussion,
-  onActorClick,
   currentTime,
   duration,
   onSeek,
@@ -37,9 +38,17 @@ export function ReelShell({
   const { isPlaying, setIsPlaying, toggleLike, captionsEnabled } = useReelsStore();
   const [doubleTapFeedback, setDoubleTapFeedback] = useState(false);
   const lastTapTimeRef = useRef(0);
+  const singleTapTimerRef = useRef<number | null>(null);
+  const feedbackTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+    if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
+  }, []);
 
   // Handle single tap (play/pause) vs double tap (like) per §5.5
-  const handleStageClick = () => {
+  const handleStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button, input, [role="slider"]')) return;
     const now = Date.now();
     const diff = now - lastTapTimeRef.current;
 
@@ -47,13 +56,15 @@ export function ReelShell({
       // Double tap -> Like
       toggleLike(reel.id);
       setDoubleTapFeedback(true);
-      setTimeout(() => setDoubleTapFeedback(false), 600);
+      if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+      feedbackTimerRef.current = window.setTimeout(() => setDoubleTapFeedback(false), 520);
       lastTapTimeRef.current = 0;
     } else {
       lastTapTimeRef.current = now;
-      setTimeout(() => {
+      singleTapTimerRef.current = window.setTimeout(() => {
         if (Date.now() - lastTapTimeRef.current >= 280 && lastTapTimeRef.current !== 0) {
           setIsPlaying(!isPlaying);
+          lastTapTimeRef.current = 0;
         }
       }, 290);
     }
@@ -68,7 +79,8 @@ export function ReelShell({
       aria-posinset={index + 1}
       aria-setsize={-1}
       aria-label={`${reel.source.title}${reel.source.season ? `, Season ${reel.source.season} Episode ${reel.source.episode}` : ''}`}
-      className="relative w-full h-[100dvh] flex items-center justify-center snap-start snap-always overflow-hidden"
+      className="relative w-full flex shrink-0 items-center justify-center snap-start snap-always overflow-hidden"
+      style={{ height: heightPx > 0 ? `${heightPx}px` : '100dvh' }}
     >
       {/* Centered 9:16 Stage Container (§6) */}
       <div
@@ -100,12 +112,23 @@ export function ReelShell({
         {/* Top Vignette Scrim */}
         <div className="absolute inset-x-0 top-0 h-28 scrim-top pointer-events-none z-15" />
 
-        {/* Double-Tap Like Pulse Feedback (§5.5) */}
+        {isActive && !isFirstFrameReady && (
+          <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center" role="status" aria-label="Buffering reel">
+            <LoaderCircle aria-hidden="true" className="animate-spin text-white" size={32} strokeWidth={2} />
+          </div>
+        )}
+
+        {isActive && isFirstFrameReady && !isPlaying && (
+          <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center" aria-hidden="true">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-black/62 text-white">
+              <Play size={30} className="ml-1 fill-white" />
+            </span>
+          </div>
+        )}
+
         {doubleTapFeedback && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none animate-ping">
-            <div className="h-20 w-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center">
-              <span className="text-3xl">❤️</span>
-            </div>
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+            <Heart aria-hidden="true" className="fill-[#ff375f] text-[#ff375f] drop-shadow-xl" size={76} strokeWidth={1.5} />
           </div>
         )}
 
@@ -115,7 +138,6 @@ export function ReelShell({
           currentTime={currentTime}
           duration={duration}
           onSeek={onSeek}
-          onActorClick={onActorClick}
           captionsActive={captionsEnabled}
         />
 

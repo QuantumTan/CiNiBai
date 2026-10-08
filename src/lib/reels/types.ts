@@ -5,6 +5,28 @@
 
 export type ReelId = string;
 
+export interface ReelItem {
+  id: string | number;
+  videoUrl: string;
+  posterUrl?: string;
+  aspectRatio?: number;
+  duration?: number;
+  author: {
+    id: string | number;
+    username: string;
+    avatarUrl?: string;
+    isFollowed?: boolean;
+  };
+  caption?: string;
+  musicTitle?: string;
+  metrics: {
+    likes: number;
+    comments: number;
+    shares: number;
+    views?: number;
+  };
+}
+
 export interface ReelSource {
   titleId: string;
   kind: 'movie' | 'series';
@@ -54,6 +76,7 @@ export interface Reel {
   // Editorial quotes and dialogue matching for Spotlight Search (§6.1)
   dialogueQuote?: string;
   tags?: string[];
+  feedItem?: ReelItem;
 }
 
 export interface ReelsPage {
@@ -70,7 +93,7 @@ export interface DiscussionComment {
   id: string;
   reelId: ReelId;
   author: string;
-  avatarUrl: string;
+  avatarUrl?: string;
   text: string;
   timestampMs: number; // Timecode synchronization (§6.2)
   likes: number;

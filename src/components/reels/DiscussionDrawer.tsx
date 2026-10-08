@@ -25,8 +25,6 @@ function formatMs(ms: number): string {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-const QUICK_REACTIONS = ['🔥', '⚡', '👁️', '🎥', '❄️'];
-
 export function DiscussionDrawer({
   isOpen,
   reel,
@@ -37,7 +35,6 @@ export function DiscussionDrawer({
   const { spring } = useSpatialMotion();
   const [comments, setComments] = useState<DiscussionComment[]>([]);
   const [inputText, setInputText] = useState('');
-  const [selectedReaction, setSelectedReaction] = useState<string | undefined>();
   const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
   
   const commentsListRef = useRef<HTMLDivElement>(null);
@@ -81,12 +78,11 @@ export function DiscussionDrawer({
       'Audience Member',
       inputText.trim(),
       currentTimeMs,
-      selectedReaction
+      undefined
     );
 
     setComments((prev) => [...prev, newComment]);
     setInputText('');
-    setSelectedReaction(undefined);
   };
 
   const toggleCommentLike = (commentId: string) => {
@@ -115,12 +111,15 @@ export function DiscussionDrawer({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={spring}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reel-comments-title"
             className="relative w-full max-w-[420px] h-full apple-glass-heavy border-l border-white/[0.08] flex flex-col pointer-events-auto z-10"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-white/[0.08]">
               <div>
-                <h2 className="type-section-title text-white">Reactions & Notes</h2>
+                <h2 id="reel-comments-title" className="type-section-title text-white">Reactions & Notes</h2>
                 <p className="type-meta text-white/48 mt-0.5">
                   Synchronized with film playback time
                 </p>
@@ -128,7 +127,7 @@ export function DiscussionDrawer({
 
               <button
                 onClick={onClose}
-                className="h-8 w-8 rounded-full apple-glass-thin flex items-center justify-center text-white/72 hover:text-white transition-colors focus-optical cursor-pointer"
+                className="min-h-11 min-w-11 rounded-full apple-glass-thin flex items-center justify-center text-white/72 hover:text-white transition-colors focus-optical cursor-pointer"
                 aria-label="Close discussion"
               >
                 <X size={16} strokeWidth={1.5} />
@@ -165,11 +164,13 @@ export function DiscussionDrawer({
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <img
-                            src={comment.avatarUrl}
-                            alt=""
-                            className="h-6 w-6 rounded-full object-cover"
-                          />
+                          {comment.avatarUrl ? (
+                            <img src={comment.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                          ) : (
+                            <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full bg-white/14 text-[10px] font-bold text-white">
+                              {comment.author.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
                           <span className="type-label text-white/90">{comment.author}</span>
                           {comment.reaction && (
                             <span className="text-xs">{comment.reaction}</span>
@@ -179,7 +180,7 @@ export function DiscussionDrawer({
                         {/* Timestamp Seek Button (§6.2: tap to seek) */}
                         <button
                           onClick={() => onSeekToMs(comment.timestampMs)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md apple-glass-thin type-meta text-white/72 hover:text-white transition-colors cursor-pointer"
+                          className="inline-flex min-h-11 items-center gap-1 px-2 py-0.5 rounded-md apple-glass-thin type-meta text-white/72 hover:text-white transition-colors cursor-pointer"
                           title="Seek to this moment"
                         >
                           <Clock size={11} strokeWidth={1.5} />
@@ -194,7 +195,7 @@ export function DiscussionDrawer({
                       <div className="flex items-center justify-end mt-2 pt-1 border-t border-white/[0.04]">
                         <button
                           onClick={() => toggleCommentLike(comment.id)}
-                          className="inline-flex items-center gap-1 type-meta text-white/48 hover:text-white transition-colors cursor-pointer"
+                          className="inline-flex min-h-11 items-center gap-1 px-2 type-meta text-white/48 hover:text-white transition-colors cursor-pointer"
                         >
                           <Heart
                             size={12}
@@ -212,31 +213,11 @@ export function DiscussionDrawer({
 
             {/* Composer (§6.2: text + reaction set + current timestamp) */}
             <form onSubmit={handleSubmit} className="p-4 border-t border-white/[0.08] space-y-3">
-              <div className="flex items-center justify-between text-xs text-white/60">
+              <div className="flex items-center text-xs text-white/60">
                 <span className="type-meta text-white/60 flex items-center gap-1">
                   <Clock size={12} strokeWidth={1.5} />
                   <span>Pinning note at {formatMs(currentTimeMs)}</span>
                 </span>
-
-                {/* Reaction Pills */}
-                <div className="flex items-center gap-1">
-                  {QUICK_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() =>
-                        setSelectedReaction(selectedReaction === emoji ? undefined : emoji)
-                      }
-                      className={`h-6 w-6 rounded-full text-xs flex items-center justify-center transition-all cursor-pointer ${
-                        selectedReaction === emoji
-                          ? 'bg-white/20 scale-110'
-                          : 'hover:bg-white/10'
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="relative flex items-center">
@@ -245,12 +226,12 @@ export function DiscussionDrawer({
                   placeholder="Record an observation at this frame..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  className="w-full pl-4 pr-11 py-2.5 rounded-full apple-glass-thin type-body text-white placeholder-white/36 border border-white/[0.1] focus-optical transition-all"
+                  className="w-full min-h-11 pl-4 pr-14 py-2.5 rounded-full apple-glass-thin type-body text-white placeholder-white/36 border border-white/[0.1] focus-optical transition-all"
                 />
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="absolute right-1.5 h-8 w-8 rounded-full apple-glass-regular flex items-center justify-center text-white disabled:opacity-30 transition-opacity cursor-pointer"
+                  className="absolute right-0 min-h-11 min-w-11 rounded-full apple-glass-regular flex items-center justify-center text-white disabled:opacity-30 transition-opacity cursor-pointer"
                 >
                   <Send size={14} strokeWidth={1.5} />
                 </button>

@@ -1,19 +1,13 @@
-/**
- * Reel Context HUD Component (§3.1, §3.2, §6.3)
- * High-legibility scrim backing with WCAG 2.1 AA against white frames,
- * title lockup, season/episode chip, actor tags (separated by ·), and audio waveform.
- */
+import { useMemo, useState } from 'react';
 import { Music2 } from 'lucide-react';
 import type { Reel } from '../../lib/reels/types';
 import { MicroScrubber } from './MicroScrubber';
-import { useSpatialMotion } from '../../lib/motion';
 
 interface ReelContextHUDProps {
   reel: Reel;
   currentTime: number;
   duration: number;
   onSeek: (targetSec: number) => void;
-  onActorClick?: (actorName: string) => void;
   captionsActive?: boolean;
 }
 
@@ -22,95 +16,94 @@ export function ReelContextHUD({
   currentTime,
   duration,
   onSeek,
-  onActorClick,
   captionsActive = false,
 }: ReelContextHUDProps) {
-  const { isReduced } = useSpatialMotion();
+  const [isFollowing, setIsFollowing] = useState(!!reel.feedItem?.author.isFollowed);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const feed = reel.feedItem;
+  const username = feed?.author.username || 'ReelShort';
+  const avatar = feed?.author.avatarUrl;
+  const caption = useMemo(() => {
+    const raw = feed?.caption || reel.dialogueQuote || '';
+    const [, ...description] = raw.split('\n');
+    return description.join(' ').trim() || raw;
+  }, [feed?.caption, reel.dialogueQuote]);
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-20 scrim-bottom pt-20 pb-5 px-5 flex flex-col justify-end pointer-events-none select-none">
-      {/* Captions Display (when enabled) */}
-      {captionsActive && reel.dialogueQuote && (
-        <div className="mb-4 self-center pointer-events-auto max-w-[85%] text-center">
-          <span className="apple-glass-thin type-body px-3.5 py-1.5 rounded-xl text-white font-medium shadow-lg backdrop-blur-md">
-            {reel.dialogueQuote}
-          </span>
-        </div>
+    <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-24 sm:px-5">
+      {captionsActive && caption && (
+        <p className="pointer-events-auto mb-4 max-w-[80%] self-center rounded-lg bg-black/82 px-3 py-2 text-center text-sm font-medium leading-snug text-white">
+          {caption}
+        </p>
       )}
 
-      {/* Main Metadata Cluster */}
-      <div className="space-y-2 pointer-events-auto max-w-[80%]">
-        {/* Source Chip & Season/Episode Tag (Max 3 chips per §3.1 #12) */}
-        <div className="flex items-center gap-2">
-          <span className="apple-glass-thin type-meta-caps px-2.5 py-0.5 rounded-full text-white/90">
-            {reel.source.kind === 'series' && reel.source.season
-              ? `S${reel.source.season} · E${reel.source.episode || 1}`
-              : 'Feature Film'}
-          </span>
-
-          {reel.tags && reel.tags[0] && (
-            <span className="type-meta text-white/60">
-              {reel.tags[0]}
+      <div className="pointer-events-auto max-w-[calc(100%-4.8rem)] space-y-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/70"
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e5b869] text-sm font-bold text-black ring-1 ring-white/70"
+            >
+              {username.slice(0, 1).toUpperCase()}
             </span>
+          )}
+          <span className="truncate text-sm font-bold text-white [text-shadow:0_1px_3px_#000]">
+            @{username}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsFollowing((value) => !value)}
+            className={`focus-optical min-h-11 rounded-lg px-3 text-xs font-bold transition-colors ${
+              isFollowing
+                ? 'bg-white/18 text-white'
+                : 'bg-white text-black hover:bg-[#f2f2f2]'
+            }`}
+            aria-pressed={isFollowing}
+          >
+            {isFollowing ? 'Following' : 'Follow'}
+          </button>
+        </div>
+
+        <div>
+          <h1 className="line-clamp-2 text-[clamp(1.05rem,4.6vw,1.35rem)] font-bold leading-tight tracking-[-0.02em] text-white [text-shadow:0_2px_6px_#000]">
+            {reel.source.title}
+          </h1>
+          {caption && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded((value) => !value)}
+              className={`focus-optical mt-1 block min-h-11 max-w-full text-left text-sm leading-snug text-white [text-shadow:0_1px_4px_#000] ${
+                isExpanded ? '' : 'line-clamp-2'
+              }`}
+              aria-expanded={isExpanded}
+            >
+              {caption}
+              {!isExpanded && caption.length > 90 && (
+                <span className="ml-1 font-bold">more</span>
+              )}
+            </button>
           )}
         </div>
 
-        {/* Title Lockup (§3.2: 28/32, 650 weight, -0.02em tracking) */}
-        <h1 className="type-title-lockup text-white leading-tight drop-shadow-sm">
-          {reel.source.title}
-        </h1>
-
-        {/* Actor Credits (§3.1 #12: plain text separated by ·, no colored chip backgrounds) */}
-        {reel.people && reel.people.length > 0 && (
-          <p className="type-meta text-white/72 flex items-center flex-wrap gap-1.5">
-            {reel.people
-              .filter((p) => p.role === 'actor')
-              .slice(0, 3)
-              .map((person, idx, arr) => (
-                <span key={person.id} className="inline-flex items-center">
-                  <button
-                    onClick={() => onActorClick?.(person.name)}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    {person.name}
-                  </button>
-                  {idx < arr.length - 1 && <span className="mx-1 text-white/40">·</span>}
-                </span>
-              ))}
-          </p>
-        )}
-
-        {/* Score & Audio Waveform Tag (§6.3) */}
-        {reel.score && (
-          <div className="inline-flex items-center gap-2 apple-glass-thin px-3 py-1 rounded-full text-white/90">
-            <Music2 size={12} strokeWidth={1.5} className="text-white/72 flex-shrink-0" />
-            <span className="type-meta text-white/90 truncate max-w-[140px]">
-              {reel.score.track}
-            </span>
-
-            {/* Micro Waveform Peaks */}
-            <div className="flex items-center gap-0.5 h-3">
-              {reel.score.waveformPeaks.slice(0, 8).map((peak, idx) => (
-                <div
-                  key={idx}
-                  className="w-[2px] rounded-full bg-white/72"
-                  style={{
-                    height: `${Math.max(2, Math.round(peak * 12))}px`,
-                    animation: isReduced ? 'none' : `pulse 1.2s ease-in-out ${idx * 0.1}s infinite alternate`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="flex min-w-0 items-center gap-2 text-xs font-medium text-white">
+          <Music2 aria-hidden="true" size={15} strokeWidth={2} className="shrink-0" />
+          <span className="truncate">
+            {feed?.musicTitle || `Original audio · ${username}`}
+          </span>
+        </div>
       </div>
 
-      {/* Liquid Micro-Scrubber (§6.3) */}
-      <div className="pt-3 pointer-events-auto">
+      <div className="pointer-events-auto pt-2">
         <MicroScrubber
           currentTime={currentTime}
           duration={duration}
-          bufferedFraction={Math.min(1, (currentTime + 10) / (duration || 1))}
+          bufferedFraction={Math.min(1, (currentTime + 8) / (duration || 1))}
           onSeek={onSeek}
         />
       </div>

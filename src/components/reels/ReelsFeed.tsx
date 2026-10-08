@@ -32,6 +32,7 @@ export function ReelsFeed() {
     isDiscoveryMode,
     fetchNextPage,
     retryFetch,
+    refreshFeed,
   } = useReelsQuery();
 
   const {
@@ -48,14 +49,20 @@ export function ReelsFeed() {
   const { extractAndSetAmbientColor } = useAmbientCanvas();
 
   // Viewport reel height
-  const [reelHeightPx, setReelHeightPx] = useState(() =>
-    typeof window !== 'undefined' ? window.innerHeight : 800
-  );
+  const [reelHeightPx, setReelHeightPx] = useState(0);
 
   useEffect(() => {
-    const handleResize = () => setReelHeightPx(window.innerHeight);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const container = containerRef.current;
+    if (!container) return;
+    const measure = () => setReelHeightPx(container.clientHeight);
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    window.visualViewport?.addEventListener('resize', measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
   }, []);
 
   // 1. Virtual DOM Window Hook (active ± 2 with spacers, §5.2)
@@ -67,7 +74,7 @@ export function ReelsFeed() {
   });
 
   // 2. Media Window Video Pool (exactly 3 recycled elements, §5.2)
-  const { slots, registerVideoElement, setFrameRendered } = useVideoPool(reels, stableIndex);
+  const { slots, videoRefs, setFrameRendered } = useVideoPool(reels, stableIndex);
 
   // Playback time & duration for active slot
   const [activeCurrentTime, setActiveCurrentTime] = useState(0);
@@ -145,7 +152,7 @@ export function ReelsFeed() {
   const activeReel = reels[stableIndex] || reels[0];
 
   return (
-    <div className="relative w-full h-[100dvh] bg-[#060709] overflow-hidden select-none">
+    <div className="relative w-full h-full min-h-0 bg-[#060709] overflow-hidden select-none">
       {/* Top Floating Glass Discovery Bar (§6.1) */}
       <ReelsDiscoveryBar />
 
@@ -165,9 +172,15 @@ export function ReelsFeed() {
         )}
 
         {/* Empty Catalog State */}
-        {!isLoading && reels.length === 0 && (
+        {!isLoading && !error && reels.length === 0 && (
           <div className="w-full h-full flex items-center justify-center p-4">
-            <EmptyState />
+            <EmptyState onRetry={refreshFeed} />
+          </div>
+        )}
+
+        {!isLoading && error && reels.length === 0 && (
+          <div className="flex h-full w-full items-center justify-center p-4">
+            <ErrorState message={error} onRetry={retryFetch} isRetrying={isLoading} />
           </div>
         )}
 
@@ -197,22 +210,21 @@ export function ReelsFeed() {
                   key={reel.id}
                   reel={reel}
                   index={idx}
+                  heightPx={reelHeightPx}
                   isActive={isActive}
                   isFirstFrameReady={slot?.isFirstFrameRendered}
                   currentTime={isActive ? activeCurrentTime : 0}
                   duration={isActive ? activeDuration : reel.durationMs / 1000}
                   onSeek={handleDirectSeek}
                   onOpenDiscussion={() => setDiscussionOpen(true)}
-                  onActorClick={() => {
-                    setSearchOpen(true);
-                  }}
                   videoElementNode={
                     slot ? (
                       <video
-                        ref={(el) => registerVideoElement(slot.slotId, el)}
+                        ref={videoRefs[slot.slotId]}
                         playsInline
                         loop
-                        onLoadedData={() => setFrameRendered(slot.slotId)}
+                        onCanPlay={() => setFrameRendered(slot.slotId)}
+                        onPlaying={() => setFrameRendered(slot.slotId)}
                         onTimeUpdate={(e) => {
                           if (isActive) {
                             setActiveCurrentTime(e.currentTarget.currentTime);

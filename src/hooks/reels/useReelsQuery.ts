@@ -25,18 +25,18 @@ export function useReelsQuery() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isDiscoveryMode, setIsDiscoveryMode] = useState(false);
 
-  // Guards against duplicate concurrent fetches
   const fetchingRef = useRef(false);
-  const retryCountRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Reset and fetch first page on filter or mood change
   const fetchInitialPage = useCallback(
     async (filter: ReelFilter, moods: ReelMood[]) => {
-      if (fetchingRef.current) return;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       fetchingRef.current = true;
       setIsLoading(true);
       setError(null);
-      retryCountRef.current = 0;
 
       try {
         const page = await fetchReelsCatalog({
@@ -44,16 +44,20 @@ export function useReelsQuery() {
           moods,
           cursor: null,
           limit: 4,
+          signal: controller.signal,
         });
 
         setReelsList(page.items);
         setNextCursor(page.nextCursor);
         setIsDiscoveryMode(page.source === 'discovery');
       } catch (err: unknown) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Unable to load reels');
       } finally {
-        setIsLoading(false);
-        fetchingRef.current = false;
+        if (abortRef.current === controller) {
+          setIsLoading(false);
+          fetchingRef.current = false;
+        }
       }
     },
     [setReelsList]
@@ -62,6 +66,7 @@ export function useReelsQuery() {
   // Fetch initial page on mount and when filter/moods change
   useEffect(() => {
     fetchInitialPage(activeFilter, activeMoods);
+    return () => abortRef.current?.abort();
   }, [activeFilter, activeMoods, fetchInitialPage]);
 
   // Fetch next page with exponential backoff (§5.3)
@@ -70,6 +75,8 @@ export function useReelsQuery() {
     if (nextCursor === null && !isDiscoveryMode) return;
 
     fetchingRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setIsFetchingNextPage(true);
     setError(null);
 
@@ -80,6 +87,7 @@ export function useReelsQuery() {
           moods: activeMoods,
           cursor: nextCursor,
           limit: 3,
+          signal: controller.signal,
         });
 
         appendReels(page.items);
@@ -87,8 +95,8 @@ export function useReelsQuery() {
         if (page.source === 'discovery') {
           setIsDiscoveryMode(true);
         }
-        retryCountRef.current = 0;
       } catch (err: unknown) {
+        if (controller.signal.aborted) return;
         if (attempt < 3) {
           // Exponential backoff: 1s, 2s, 4s (§5.3)
           const delay = Math.pow(2, attempt) * 1000;
@@ -114,7 +122,10 @@ export function useReelsQuery() {
     error,
     isDiscoveryMode,
     fetchNextPage,
-    retryFetch: fetchNextPage,
+    retryFetch:
+      reelsList.length === 0
+        ? () => fetchInitialPage(activeFilter, activeMoods)
+        : fetchNextPage,
     refreshFeed: () => fetchInitialPage(activeFilter, activeMoods),
   };
 }

@@ -89,8 +89,7 @@ export function ReelsPage() {
         description="Stream real-time trending mini-series, billionaire dramas, werewolf romances, and iconic cinema sequences in optical visionOS liquid glass."
       />
 
-      {/* DramaBox Sticky Navbar */}
-      <DramaNavbar />
+      {activeTab !== 'infinite-feed' && <DramaNavbar />}
 
       {/* Main Tab Content */}
       <main className="w-full">
@@ -99,7 +98,7 @@ export function ReelsPage() {
         {activeTab === 'new-release' && <DramaNewReleaseView />}
         {activeTab === 'history' && <DramaHistoryView />}
         {activeTab === 'infinite-feed' && (
-          <div className="relative w-full h-[calc(100dvh-4rem)] overflow-hidden">
+          <div className="fixed inset-0 z-40 w-full h-[100dvh] overflow-hidden bg-[#060709]">
             <ReelsFeed />
           </div>
         )}

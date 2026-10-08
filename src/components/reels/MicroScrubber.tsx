@@ -3,7 +3,7 @@
  * 2px glass hairline expanding to 6px on hover/drag via scaleY transform.
  * Pointer-capture dragging, hover timecode tooltip, ARIA slider semantics.
  */
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 interface MicroScrubberProps {
@@ -30,6 +30,17 @@ export function MicroScrubber({
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; time: number } | null>(null);
+  const activePointerRef = useRef<number | null>(null);
+
+  const endDrag = useCallback(() => {
+    activePointerRef.current = null;
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('blur', endDrag);
+    return () => window.removeEventListener('blur', endDrag);
+  }, [endDrag]);
 
   const safeDuration = duration > 0 ? duration : 1;
   const progressRatio = Math.max(0, Math.min(1, currentTime / safeDuration));
@@ -49,6 +60,8 @@ export function MicroScrubber({
 
   // Pointer down & drag with pointer capture (§6.3)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerRef.current !== null || !e.isPrimary) return;
+    activePointerRef.current = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
     const target = calculateSecondsFromEvent(e.clientX);
@@ -65,15 +78,15 @@ export function MicroScrubber({
 
     setHoverPosition({ x: relativeX, time: targetSeconds });
 
-    if (isDragging) {
+    if (isDragging && activePointerRef.current === e.pointerId) {
       onSeek(targetSeconds);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isDragging) {
+    if (activePointerRef.current === e.pointerId) {
       e.currentTarget.releasePointerCapture(e.pointerId);
-      setIsDragging(false);
+      endDrag();
     }
   };
 
@@ -81,15 +94,19 @@ export function MicroScrubber({
 
   return (
     <div
-      className="relative w-full py-2 cursor-pointer select-none group focus-optical"
+      className="focus-optical group relative flex min-h-11 w-full cursor-pointer touch-pan-y select-none items-center"
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => {
-        setIsHovered(false);
-        setHoverPosition(null);
+        if (!isDragging) {
+          setIsHovered(false);
+          setHoverPosition(null);
+        }
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
       role="slider"
       tabIndex={0}
       aria-label="Reel playback progress"

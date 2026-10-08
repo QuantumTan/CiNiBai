@@ -1,4 +1,6 @@
 import { DRAMABOX_DRAMAS } from '../data/dramaboxData';
+export { fetchReelsFeed } from '../lib/reels/api';
+export type { ReelItem } from '../lib/reels/types';
 
 export interface ReelEpisode {
   id: string;

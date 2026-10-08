@@ -28,7 +28,7 @@ export function ErrorState({ message, onRetry, isRetrying = false }: ErrorStateP
       <button
         onClick={onRetry}
         disabled={isRetrying}
-        className="apple-glass-thin type-label px-4 py-2 rounded-full text-white/80 hover:text-white transition-all disabled:opacity-50 focus-optical cursor-pointer"
+        className="apple-glass-thin type-label min-h-11 px-4 py-2 rounded-full text-white/80 hover:text-white transition-all disabled:opacity-50 focus-optical cursor-pointer"
       >
         {isRetrying ? 'Reconnecting...' : 'Retry Next Clip'}
       </button>

@@ -84,16 +84,15 @@ export function ClipSearchModal({ isOpen, onClose, onSelectReel }: ClipSearchMod
     }
   };
 
-  const handleSelectSuggestion = (term: string) => {
-    setQuery(term);
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 pointer-events-none">
           {/* Backdrop Scrim */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search loaded reels"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -119,12 +118,13 @@ export function ClipSearchModal({ isOpen, onClose, onSelectReel }: ClipSearchMod
                 placeholder="Search dialogue quotes, actors, directors, or scene tags..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-3 pr-10 py-1 bg-transparent type-body text-white placeholder-white/40 focus:outline-none"
+                className="min-h-11 w-full pl-3 pr-10 py-1 bg-transparent type-body text-white placeholder-white/40 focus:outline-none"
               />
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="text-white/48 hover:text-white p-1 transition-colors cursor-pointer mr-1"
+                  className="focus-optical mr-1 grid min-h-11 min-w-11 place-items-center text-white/48 transition-colors hover:text-white"
+                  aria-label="Clear search"
                 >
                   <X size={16} strokeWidth={1.5} />
                 </button>
@@ -137,26 +137,13 @@ export function ClipSearchModal({ isOpen, onClose, onSelectReel }: ClipSearchMod
             {/* Results / Empty / Suggested Content */}
             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
               {!query && (
-                <div className="py-8 px-4 space-y-4">
-                  <span className="type-meta-caps text-white/40 block">Suggested Searches</span>
-                  <div className="flex flex-wrap gap-2">
-                    {['Cillian Murphy', 'Tears in Rain', 'Hans Zimmer', 'Trinity Test', 'Caravan'].map(
-                      (item) => (
-                        <button
-                          key={item}
-                          onClick={() => handleSelectSuggestion(item)}
-                          className="apple-glass-thin type-meta px-3 py-1.5 rounded-full text-white/72 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
-                        >
-                          {item}
-                        </button>
-                      )
-                    )}
-                  </div>
+                <div className="px-4 py-10 text-center">
+                  <p className="type-body text-white/72">Search the titles and captions already loaded in this feed.</p>
                 </div>
               )}
 
               {query && !isSearching && results.length === 0 && (
-                <NoResultsState query={query} onSelectSuggestion={handleSelectSuggestion} />
+                <NoResultsState query={query} />
               )}
 
               {results.length > 0 && (
@@ -164,14 +151,15 @@ export function ClipSearchModal({ isOpen, onClose, onSelectReel }: ClipSearchMod
                   {results.map((res, idx) => {
                     const isSelected = idx === selectedIndex;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={`${res.reel.id}-${idx}`}
                         onClick={() => {
                           onSelectReel(res.reel);
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(idx)}
-                        className={`flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
+                        className={`focus-optical flex w-full min-h-11 items-center gap-3 p-3 rounded-2xl text-left transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-white/[0.12] border border-white/[0.16] shadow-md'
                             : 'hover:bg-white/[0.04] border border-transparent'
@@ -209,7 +197,7 @@ export function ClipSearchModal({ isOpen, onClose, onSelectReel }: ClipSearchMod
                             <span className="type-meta">Jump</span>
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

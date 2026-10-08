@@ -28,10 +28,15 @@ export function useReelsWindow({
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Compute DOM window: active ± 2
+  useEffect(() => {
+    const clamped = Math.max(0, Math.min(activeIndex, Math.max(0, totalItems - 1)));
+    setStableIndex(clamped);
+  }, [activeIndex, totalItems]);
+
+  // Keep the previous slide, active slide, and the next two slides mounted.
   const windowRange = useMemo(() => {
     if (totalItems === 0) return { start: 0, end: 0, renderedIndices: [] };
-    const start = Math.max(0, stableIndex - 2);
+    const start = Math.max(0, stableIndex - 1);
     const end = Math.min(totalItems - 1, stableIndex + 2);
     const renderedIndices: number[] = [];
     for (let i = start; i <= end; i++) {
@@ -93,7 +98,7 @@ export function useReelsWindow({
       },
       {
         root: container,
-        threshold: 0.62, // Strict visibility threshold per §5.2
+        threshold: 0.7,
       }
     );
 

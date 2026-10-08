@@ -3,7 +3,7 @@
  * Eliminates memory leaks and decoder exhaustion by maintaining exactly 3 reusable
  * video elements (prev, active, next). Recycles video slots and handles HLS lifecycle.
  */
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import type { Reel } from '../../lib/reels/types';
 import { useReelsStore } from '../../stores/reels';
@@ -21,7 +21,7 @@ export interface PoolSlot {
 }
 
 export function useVideoPool(reels: Reel[], activeIndex: number) {
-  const { isMuted, isPlaying } = useReelsStore();
+  const { isMuted, isPlaying, setMuted, setIsPlaying } = useReelsStore();
 
   // Three fixed video slots
   const [slots, setSlots] = useState<PoolSlot[]>([
@@ -36,13 +36,28 @@ export function useVideoPool(reels: Reel[], activeIndex: number) {
     1: null,
     2: null,
   });
+  const slotsRef = useRef(slots);
+  const sourceByVideoRef = useRef(new WeakMap<HTMLVideoElement, string>());
+
+  useEffect(() => {
+    slotsRef.current = slots;
+  }, [slots]);
 
   // Attach a video element to a slot
   const registerVideoElement = useCallback((slotId: number, el: HTMLVideoElement | null) => {
-    setSlots((prev) =>
-      prev.map((s) => (s.slotId === slotId ? { ...s, videoElement: el } : s))
-    );
+    setSlots((prev) => {
+      const slot = prev.find((item) => item.slotId === slotId);
+      if (slot?.videoElement === el) return prev;
+      return prev.map((item) =>
+        item.slotId === slotId ? { ...item, videoElement: el } : item
+      );
+    });
   }, []);
+
+  const videoRefs = useMemo(
+    () => [0, 1, 2].map((slotId) => (el: HTMLVideoElement | null) => registerVideoElement(slotId, el)),
+    [registerVideoElement]
+  );
 
   // Clean up and detach a video slot (§5.2)
   const detachSlot = useCallback((slotId: number, video: HTMLVideoElement | null) => {
@@ -138,8 +153,8 @@ export function useVideoPool(reels: Reel[], activeIndex: number) {
       const isM3u8 = reel.playbackUrl.includes('.m3u8');
 
       // Setup source if changed
-      if (video.dataset.currentSrc !== reel.playbackUrl) {
-        video.dataset.currentSrc = reel.playbackUrl;
+      if (sourceByVideoRef.current.get(video) !== reel.playbackUrl) {
+        sourceByVideoRef.current.set(video, reel.playbackUrl);
 
         if (isM3u8) {
           if (Hls.isSupported()) {
@@ -168,9 +183,10 @@ export function useVideoPool(reels: Reel[], activeIndex: number) {
 
         if (isPlaying) {
           video.play().catch(() => {
-            // Autoplay rejected: mute and retry or set quiet tap to play
+            setMuted(true);
             video.muted = true;
             video.play().catch(() => {
+              setIsPlaying(false);
               setSlots((prev) =>
                 prev.map((s) => (s.slotId === slot.slotId ? { ...s, hasPlayError: true } : s))
               );
@@ -180,13 +196,17 @@ export function useVideoPool(reels: Reel[], activeIndex: number) {
           video.pause();
         }
       } else {
-        // Prev and Next slots stay paused, muted, with metadata preloaded (§5.2)
         video.pause();
         video.muted = true;
-        video.preload = 'metadata';
+        if (slot.role === 'prev') {
+          video.currentTime = 0;
+          video.preload = 'none';
+        } else {
+          video.preload = 'auto';
+        }
       }
     }
-  }, [slots, reels, isMuted, isPlaying]);
+  }, [slots, reels, isMuted, isPlaying, setMuted, setIsPlaying]);
 
   // Tab visibility handling (§5.2)
   useEffect(() => {
@@ -212,12 +232,18 @@ export function useVideoPool(reels: Reel[], activeIndex: number) {
       for (const slotId in currentHls) {
         currentHls[slotId]?.destroy();
       }
+      for (const slot of slotsRef.current) {
+        if (!slot.videoElement) continue;
+        slot.videoElement.pause();
+        slot.videoElement.removeAttribute('src');
+        slot.videoElement.load();
+      }
     };
   }, []);
 
   return {
     slots,
-    registerVideoElement,
+    videoRefs,
     setFrameRendered: (slotId: number) => {
       setSlots((prev) =>
         prev.map((s) => (s.slotId === slotId ? { ...s, isFirstFrameRendered: true } : s))

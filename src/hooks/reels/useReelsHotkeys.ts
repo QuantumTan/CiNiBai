@@ -38,7 +38,7 @@ export function useReelsHotkeys({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 1. Suspend hotkeys while input, textarea, or search has focus (§5.5)
-      const target = e.target as HTMLElement | null;
+      const target = e.target instanceof HTMLElement ? e.target : null;
       const isInputField =
         target &&
         (target.tagName === 'INPUT' ||
