@@ -225,6 +225,7 @@ export function ReelsFeed() {
                         loop
                         onCanPlay={() => setFrameRendered(slot.slotId)}
                         onPlaying={() => setFrameRendered(slot.slotId)}
+                        onLoadedData={() => setFrameRendered(slot.slotId)}
                         onTimeUpdate={(e) => {
                           if (isActive) {
                             setActiveCurrentTime(e.currentTarget.currentTime);

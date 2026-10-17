@@ -1,9 +1,3 @@
-/**
- * DramaBox & ReelShort Live Streaming Platform + Infinite Reels Engine
- * Exact parity with https://reels.7xmtools.com/ & https://apireel.7xm.dev/
- * Integrated into CiNiBai's optical-grade visionOS liquid glass design system.
- */
-
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDramaBoxStore } from '../stores/dramaboxStore';
@@ -14,7 +8,6 @@ import { DramaAllMoviesView } from '../components/dramabox/DramaAllMoviesView';
 import { DramaNewReleaseView } from '../components/dramabox/DramaNewReleaseView';
 import { DramaHistoryView } from '../components/dramabox/DramaHistoryView';
 import { DramaPlayerModal } from '../components/dramabox/DramaPlayerModal';
-import { DramaAuthModal } from '../components/dramabox/DramaAuthModal';
 import { DramaSearchModal } from '../components/dramabox/DramaSearchModal';
 import { ReelsFeed } from '../components/reels/ReelsFeed';
 import { SEO } from '../components/common/SEO';
@@ -25,14 +18,14 @@ export function ReelsPage() {
   const [searchParams] = useSearchParams();
   const hasLoadedUrlDramaRef = useRef<string | null>(null);
 
-  // Sync with URL params if provided (?tab=all-movies, etc.)
+  // Sync with URL params if provided (?tab=all-movies, etc.), otherwise default directly to feed
   useEffect(() => {
     const tabParam = searchParams.get('tab') as DramaViewTab;
     if (tabParam && ['home', 'all-movies', 'new-release', 'history', 'infinite-feed'].includes(tabParam)) {
       if (tabParam !== activeTab) {
         setActiveTab(tabParam);
       }
-    } else if (searchParams.get('feed') === '1' || searchParams.get('infinite') === '1') {
+    } else {
       if (activeTab !== 'infinite-feed') {
         setActiveTab('infinite-feed');
       }
@@ -52,12 +45,11 @@ export function ReelsPage() {
     const epParam = searchParams.get('ep') || searchParams.get('episode');
     const targetEpisodeIndex = epParam ? Math.max(1, parseInt(epParam, 10)) : 1;
 
-    // Fetch live series metadata from apireel.7xm.dev and immediately open player
+    // Fetch series metadata and open player
     dramaboxApi.getSeriesDetail(dramaId, undefined, true).then((detail) => {
       if (detail && detail.series) {
         openPlayerModal(detail.series, targetEpisodeIndex);
       } else {
-        // Fallback: search trending or construct minimal series object
         dramaboxApi.getTrendingSeries().then((trending) => {
           const match = trending.find((s) => s.id === dramaId);
           if (match) {
@@ -66,9 +58,9 @@ export function ReelsPage() {
             openPlayerModal(
               {
                 id: dramaId,
-                title: 'DramaBox Series',
+                title: 'CineBai Series',
                 cover_pic: '',
-                description: 'Live streaming mini-series',
+                description: 'Free streaming mini-series',
                 chapter_count: 50,
                 read_count: 500000,
                 collect_count: 15000,
@@ -83,10 +75,10 @@ export function ReelsPage() {
   }, [searchParams, openPlayerModal]);
 
   return (
-    <div className="relative min-h-screen bg-[#08080a] text-[#f4f4f7] selection:bg-rose-500/30 selection:text-white">
+    <div className="relative min-h-screen bg-[#08080a] text-[#f4f4f7] selection:bg-amber-500/30 selection:text-white">
       <SEO
-        title="DramaBox & Reels - Short Drama Cinema & Live Streams - CiNiBai"
-        description="Stream real-time trending mini-series, billionaire dramas, werewolf romances, and iconic cinema sequences in optical visionOS liquid glass."
+        title="Reels - Free Short Dramas & Cinema Sequences - CineBai"
+        description="Stream 100% free trending short drama mini-series and iconic cinema sequences in optical visionOS liquid glass."
       />
 
       {activeTab !== 'infinite-feed' && <DramaNavbar />}
@@ -106,7 +98,6 @@ export function ReelsPage() {
 
       {/* Global Interactive Modals */}
       <DramaPlayerModal />
-      <DramaAuthModal />
       <DramaSearchModal />
     </div>
   );

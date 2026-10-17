@@ -61,7 +61,7 @@ interface DramaBoxState {
 export const useDramaBoxStore = create<DramaBoxState>()(
   persist(
     (set, get) => ({
-      activeTab: 'home',
+      activeTab: 'infinite-feed',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
       isAuthModalOpen: false,
@@ -77,34 +77,27 @@ export const useDramaBoxStore = create<DramaBoxState>()(
       closePlayerModal: () => set({ activeModalSeries: null }),
       setActiveEpisodeIndex: (index) => set({ activeModalEpisodeIndex: index }),
 
-      // Default user has 100 free coins (like 7xmtools registration)
+      // All content is completely free
       user: null,
       token: null,
-      coins: 100,
+      coins: 0,
 
       setUser: (user, token) => {
         if (typeof window !== 'undefined' && token) {
           localStorage.setItem('dramabox_token', token);
         }
-        set({ user, token, coins: user?.coins ?? get().coins });
+        set({ user, token, coins: 0 });
       },
 
-      deductCoins: (amount) => {
-        const current = get().coins;
-        if (current >= amount) {
-          set({ coins: current - amount });
-          return true;
-        }
-        return false;
-      },
+      deductCoins: () => true,
 
-      addCoins: (amount) => set((s) => ({ coins: s.coins + amount })),
+      addCoins: () => {},
 
       logout: () => {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('dramabox_token');
         }
-        set({ user: null, token: null, coins: 100 });
+        set({ user: null, token: null, coins: 0 });
       },
 
       shelf: [],

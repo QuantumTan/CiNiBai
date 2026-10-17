@@ -23,9 +23,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Lock,
   Layers,
-  Coins,
   RefreshCw,
   FastForward
 } from 'lucide-react';
@@ -48,15 +46,11 @@ export function DramaPlayerModal() {
     setActiveEpisodeIndex,
     toggleShelf,
     isInShelf,
-    coins,
-    deductCoins,
     recordProgress,
-    setAuthModalOpen,
   } = useDramaBoxStore();
 
   const [detailData, setDetailData] = useState<DramaSeriesDetailResponse | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
-  const [isUnlocking, setIsUnlocking] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -114,11 +108,6 @@ export function DramaPlayerModal() {
     setStreamError(null);
     const videoUrl = activeEpisode.video_url;
 
-    if (!activeEpisode.is_unlocked && activeEpisode.is_paid) {
-      // Episode is locked; do not stream yet
-      video.pause();
-      return;
-    }
 
     if (!videoUrl) {
       const availableEp = episodes.find((ep) => !!ep.video_url && ep.video_url.includes('.m3u8'));
@@ -278,28 +267,6 @@ export function DramaPlayerModal() {
     }
   };
 
-  // Unlock episode handler
-  const handleUnlock = async () => {
-    if (!activeEpisode) return;
-    setIsUnlocking(true);
-    try {
-      const cost = activeEpisode.coin_cost || 10;
-      if (coins < cost) {
-        setAuthModalOpen(true);
-        setIsUnlocking(false);
-        return;
-      }
-      const success = await dramaboxApi.unlockEpisode(activeEpisode.id);
-      if (success || coins >= cost) {
-        deductCoins(cost);
-        // Reload detail with refresh_stream=1 to get signed m3u8
-        await loadDetail(true);
-      }
-    } finally {
-      setIsUnlocking(false);
-    }
-  };
-
   if (!activeModalSeries) return null;
 
   const isSaved = isInShelf(activeModalSeries.id);
@@ -361,7 +328,7 @@ export function DramaPlayerModal() {
             )}
 
             {/* Play/Pause Center Indicator (visible when paused) */}
-            {!isPlaying && !activeEpisode?.is_paid && (
+            {!isPlaying && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 bg-black/25">
                 <div className="w-16 h-16 rounded-full apple-glass-heavy border border-white/20 flex items-center justify-center shadow-xl text-white">
                   <Play className="w-8 h-8 fill-white ml-1" strokeWidth={1.5} />
@@ -369,38 +336,8 @@ export function DramaPlayerModal() {
               </div>
             )}
 
-            {/* Locked Episode Overlay */}
-            {activeEpisode?.is_paid && !activeEpisode?.is_unlocked && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/85 backdrop-blur-md">
-                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
-                  <Lock className="w-8 h-8 text-amber-400" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">Episode {activeEpisode.episode_index} is Locked</h3>
-                <p className="type-meta text-white/72 mb-6 max-w-xs">
-                  Unlock this episode to continue watching in full high-definition streaming.
-                </p>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUnlock();
-                  }}
-                  disabled={isUnlocking}
-                  className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-sm shadow-xl flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
-                >
-                  <Coins className="w-4 h-4" />
-                  <span>
-                    {isUnlocking ? 'Unlocking...' : `Unlock for ${activeEpisode.coin_cost || 10} Coins`}
-                  </span>
-                </button>
-                <span className="type-meta text-white/48 mt-3 text-xs">
-                  Your Balance: {coins} Coins
-                </span>
-              </div>
-            )}
-
             {/* Stream Error / Retry Overlay */}
-            {streamError && activeEpisode?.is_unlocked && (
+            {streamError && (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/85 backdrop-blur-md">
                 <p className="type-meta text-white/88 mb-4 max-w-xs">{streamError}</p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -625,7 +562,6 @@ export function DramaPlayerModal() {
             ) : (
               episodes.map((ep) => {
                 const isCurrent = ep.episode_index === activeModalEpisodeIndex;
-                const isLocked = ep.is_paid && !ep.is_unlocked;
 
                 return (
                   <div
@@ -646,15 +582,11 @@ export function DramaPlayerModal() {
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                        {isCurrent ? (
+                        {isCurrent && (
                           <div className="absolute inset-0 bg-rose-900/60 flex items-center justify-center">
                             <Play className="w-4 h-4 fill-white text-white" />
                           </div>
-                        ) : isLocked ? (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <Lock className="w-4 h-4 text-amber-400" />
-                          </div>
-                        ) : null}
+                        )}
                       </div>
 
                       <div className="flex flex-col text-left min-w-0">
@@ -678,13 +610,8 @@ export function DramaPlayerModal() {
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
                           Playing
                         </span>
-                      ) : isLocked ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-semibold flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-amber-400" />
-                          {ep.coin_cost ? `${ep.coin_cost} Coins` : 'Locked'}
-                        </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-white/48 text-[11px]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium">
                           Free
                         </span>
                       )}

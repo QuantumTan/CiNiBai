@@ -37,36 +37,26 @@ export function ReelShell({
 }: ReelShellProps) {
   const { isPlaying, setIsPlaying, toggleLike, captionsEnabled } = useReelsStore();
   const [doubleTapFeedback, setDoubleTapFeedback] = useState(false);
-  const lastTapTimeRef = useRef(0);
-  const singleTapTimerRef = useRef<number | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => () => {
-    if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
     if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
   }, []);
 
-  // Handle single tap (play/pause) vs double tap (like) per §5.5
+  // Handle single tap (play/pause) vs double tap (like)
   const handleStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('button, input, [role="slider"]')) return;
-    const now = Date.now();
-    const diff = now - lastTapTimeRef.current;
 
-    if (diff < 300) {
-      // Double tap -> Like
+    if (event.detail === 2) {
       toggleLike(reel.id);
       setDoubleTapFeedback(true);
-      if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+      if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
       feedbackTimerRef.current = window.setTimeout(() => setDoubleTapFeedback(false), 520);
-      lastTapTimeRef.current = 0;
-    } else {
-      lastTapTimeRef.current = now;
-      singleTapTimerRef.current = window.setTimeout(() => {
-        if (Date.now() - lastTapTimeRef.current >= 280 && lastTapTimeRef.current !== 0) {
-          setIsPlaying(!isPlaying);
-          lastTapTimeRef.current = 0;
-        }
-      }, 290);
+      return;
+    }
+
+    if (event.detail === 1) {
+      setIsPlaying(!isPlaying);
     }
   };
 
