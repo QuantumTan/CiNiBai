@@ -30,7 +30,7 @@ export function ReelContextHUD({
   }, [feed?.caption, reel.dialogueQuote]);
 
   return (
-    <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-24 sm:px-5">
+    <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-6 pt-24 sm:px-5">
       {captionsActive && caption && (
         <p className="pointer-events-auto mb-4 max-w-[80%] self-center rounded-lg bg-black/82 px-3 py-2 text-center text-sm font-medium leading-snug text-white">
           {caption}

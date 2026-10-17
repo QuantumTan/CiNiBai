@@ -22,15 +22,11 @@ export function ReelsPage() {
   useEffect(() => {
     const tabParam = searchParams.get('tab') as DramaViewTab;
     if (tabParam && ['home', 'all-movies', 'new-release', 'history', 'infinite-feed'].includes(tabParam)) {
-      if (tabParam !== activeTab) {
-        setActiveTab(tabParam);
-      }
-    } else {
-      if (activeTab !== 'infinite-feed') {
-        setActiveTab('infinite-feed');
-      }
+      setActiveTab(tabParam);
+    } else if (!searchParams.has('tab')) {
+      setActiveTab('infinite-feed');
     }
-  }, [searchParams, activeTab, setActiveTab]);
+  }, [searchParams, setActiveTab]);
 
   // Support direct drama linking via ?drama={id} or ?seriesId={id}
   useEffect(() => {

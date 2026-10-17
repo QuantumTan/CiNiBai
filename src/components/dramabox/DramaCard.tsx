@@ -23,7 +23,7 @@ export function DramaCard({ series }: DramaCardProps) {
   return (
     <div
       onClick={() => openPlayerModal(series, 1)}
-      className="group relative flex flex-col flex-shrink-0 w-36 sm:w-44 md:w-48 cursor-pointer select-none"
+      className="group relative flex flex-col w-full cursor-pointer select-none"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

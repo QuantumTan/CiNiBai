@@ -77,7 +77,7 @@ export function DramaHomeView() {
   );
 
   return (
-    <div className="w-full pb-16 animate-fade-in">
+    <div className="w-full pb-24 sm:pb-28 animate-fade-in">
       {/* 1. Hero Banner Spotlight */}
       <DramaHeroBanner series={spotlight} />
 

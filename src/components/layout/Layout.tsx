@@ -6,6 +6,9 @@ import { RefractionFilter } from '../glass/RefractionFilter';
 
 export function Layout() {
   const location = useLocation();
+  const isInfiniteReels =
+    location.pathname.startsWith('/reels') &&
+    (!location.search.includes('tab=') || location.search.includes('tab=infinite-feed'));
   const isReelsSurface = location.pathname.startsWith('/reels');
 
   return (
@@ -17,15 +20,15 @@ export function Layout() {
       {!isReelsSurface && <Navbar />}
 
       {/* Main Content Area with bottom clearance for mobile navigation */}
-      <main className={isReelsSurface ? 'flex-1' : 'flex-1 pb-20 md:pb-16'}>
+      <main className={isInfiniteReels ? 'flex-1' : 'flex-1 pb-20 md:pb-16'}>
         <Outlet />
       </main>
 
       {/* Footer */}
-      {!isReelsSurface && <Footer />}
+      {!isInfiniteReels && <Footer />}
 
       {/* Adaptive iOS / visionOS Liquid Glass Nav Dock */}
-      {!isReelsSurface && <FloatingNavDock />}
+      <FloatingNavDock />
     </div>
   );
 }

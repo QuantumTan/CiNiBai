@@ -53,7 +53,7 @@ export function DramaNewReleaseView() {
   }, []);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-28 animate-fade-in">
       {/* Header */}
       <div className="border-b border-white/[0.08] pb-6 mb-8">
         <span className="type-meta text-xs uppercase tracking-wider text-rose-400 font-semibold mb-1 block">

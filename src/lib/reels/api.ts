@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { INITIAL_REELS_CATALOG } from './mockData';
 import { scrapeLiveCatalog } from './reelsScraperService';
-import { getStreamForDrama } from './dramaboxApi';
+import { VERIFIED_SHORT_DRAMA_STREAMS } from './dramaboxApi';
 
 interface ReelsFeedParams {
   cursor?: string | null;
@@ -63,48 +63,53 @@ export async function fetchReelsFeed(
   const safeLimit = Math.min(10, Math.max(1, Math.floor(limit)));
   const position = parseCursor(cursor, page);
 
-  let combinedPool: ReelItem[] = [];
+  const localItems = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
+  const map = new Map<string, ReelItem>();
 
+  for (const item of localItems) {
+    map.set(String(item.id), item);
+  }
+
+  // Add verified short drama items that have matching authentic .m3u8 CDN streams
   try {
     const scrapedCatalog = await scrapeLiveCatalog();
     if (Array.isArray(scrapedCatalog) && scrapedCatalog.length > 0) {
-      const scrapedFeedItems: ReelItem[] = scrapedCatalog.map((s) => ({
-        id: `reel-${s.id}-ep1`,
-        videoUrl: getStreamForDrama(s.id, 1),
-        posterUrl: s.cover_pic,
-        aspectRatio: 9 / 16,
-        duration: 90,
-        author: {
-          id: 'cinebai',
-          username: 'CineBai Reels',
-          isFollowed: false,
-        },
-        caption: `${s.title}\n${s.description || '100% Free streaming short drama series.'}`,
-        metrics: {
-          likes: s.collect_count,
-          comments: Math.floor(s.collect_count / 15),
-          shares: Math.floor(s.collect_count / 25),
-          views: s.read_count,
-        },
-      }));
+      for (const verified of VERIFIED_SHORT_DRAMA_STREAMS) {
+        const drama = scrapedCatalog.find(
+          (s) => s.id === verified.id || verified.id.includes(s.id) || s.id.includes(verified.id)
+        );
+        const title = drama?.title || verified.title;
+        const posterUrl = drama?.cover_pic || 'https://v-img.crazymaplestudios.com/v-images/book_cover_batch/200000000000000034/55598531-ee05-496a-8694-9cc9fcf09be7.jpg';
+        const id = `reel-${verified.id}-ep1`;
 
-      // Combine scraped items with editorial catalog items
-      const localItems = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
-      const map = new Map<string, ReelItem>();
-      for (const item of scrapedFeedItems) map.set(String(item.id), item);
-      for (const item of localItems) {
-        if (!map.has(String(item.id))) map.set(String(item.id), item);
+        if (!map.has(id)) {
+          map.set(id, {
+            id,
+            videoUrl: verified.streamUrl,
+            posterUrl,
+            aspectRatio: 9 / 16,
+            duration: 90,
+            author: {
+              id: 'cinebai',
+              username: 'CineBai Reels',
+              isFollowed: false,
+            },
+            caption: `${title}\n${drama?.description || '100% Free streaming short drama on CineBai.'}`,
+            metrics: {
+              likes: drama?.collect_count || 45000,
+              comments: Math.floor((drama?.collect_count || 45000) / 15),
+              shares: Math.floor((drama?.collect_count || 45000) / 25),
+              views: drama?.read_count || 850000,
+            },
+          });
+        }
       }
-      combinedPool = Array.from(map.values());
     }
   } catch {
-    // If scraper error, fallback to curated local catalog
+    // Curated catalog fallback
   }
 
-  if (combinedPool.length === 0) {
-    combinedPool = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
-  }
-
+  const combinedPool = Array.from(map.values());
   const total = combinedPool.length;
   const startIndex = ((position.page - 1) * safeLimit + position.offset) % total;
   const items: ReelItem[] = [];

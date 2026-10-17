@@ -88,7 +88,7 @@ export function ReelActionDock({ reel, onOpenDiscussion }: ReelActionDockProps) 
   return (
     <aside
       aria-label="Reel actions"
-      className="absolute bottom-[6.6rem] right-2 z-25 flex w-[4.5rem] flex-col items-center gap-2.5 sm:right-3"
+      className="absolute bottom-[calc(7.25rem+env(safe-area-inset-bottom))] md:bottom-24 right-2 z-25 flex w-[4.5rem] flex-col items-center gap-2.5 sm:right-3"
     >
       {shareStatus !== 'idle' && (
         <div

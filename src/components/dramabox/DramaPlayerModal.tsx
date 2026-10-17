@@ -24,12 +24,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  RefreshCw,
-  FastForward
+  FastForward,
+  Zap,
+  Server,
+  ShieldCheck,
 } from 'lucide-react';
 import { useDramaBoxStore } from '../../stores/dramaboxStore';
 import { dramaboxApi } from '../../lib/reels/dramaboxApi';
 import type { DramaEpisode, DramaSeriesDetailResponse } from '../../lib/reels/dramaboxTypes';
+import {
+  REEL_PROVIDERS,
+  isEmbedUrl,
+  getOfficialEmbedUrl,
+} from '../../api/reelsProviders';
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -51,6 +58,7 @@ export function DramaPlayerModal() {
 
   const [detailData, setDetailData] = useState<DramaSeriesDetailResponse | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
+  const [selectedServer, setSelectedServer] = useState<'hls-direct' | 'official-embed' | 'cloud-mirror'>('hls-direct');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -93,28 +101,35 @@ export function DramaPlayerModal() {
   const activeEpisode: DramaEpisode | undefined =
     episodes.find((ep) => ep.episode_index === activeModalEpisodeIndex) || episodes[0];
 
-  // Initialize and attach HLS stream
+  const directHlsAvailable = Boolean(
+    activeEpisode?.m3u8_url ||
+    (activeEpisode?.video_url && activeEpisode.video_url.includes('.m3u8') && !isEmbedUrl(activeEpisode.video_url))
+  );
+
+  const isEmbedMode = selectedServer !== 'hls-direct' || !directHlsAvailable;
+
+  // Initialize and attach HLS stream (only in direct HLS mode)
   useEffect(() => {
+    if (isEmbedMode) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (!video || !activeEpisode) return;
 
-    // Destroy existing HLS session
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
     setStreamError(null);
-    const videoUrl = activeEpisode.video_url;
+    const videoUrl = activeEpisode.m3u8_url || activeEpisode.video_url;
 
-
-    if (!videoUrl) {
-      const availableEp = episodes.find((ep) => !!ep.video_url && ep.video_url.includes('.m3u8'));
-      if (availableEp && availableEp.episode_index !== activeModalEpisodeIndex) {
-        setStreamError(`Episode ${activeModalEpisodeIndex} stream is unavailable. Episode ${availableEp.episode_index} is available.`);
-      } else {
-        setStreamError('This episode stream is preparing on upstream. Tap "Refresh Stream" below.');
-      }
+    if (!videoUrl || !videoUrl.includes('.m3u8')) {
       return;
     }
 
@@ -146,13 +161,12 @@ export function DramaPlayerModal() {
               break;
             default:
               hls.destroy();
-              setStreamError('Stream connection interrupted.');
+              setSelectedServer('official-embed');
               break;
           }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native iOS / Safari HLS fallback
       video.src = videoUrl;
       video.playbackRate = playbackRate;
       video.muted = isMuted;
@@ -169,7 +183,7 @@ export function DramaPlayerModal() {
         hlsRef.current = null;
       }
     };
-  }, [activeEpisode, isMuted, playbackRate]);
+  }, [isEmbedMode, activeEpisode, isMuted, playbackRate]);
 
   // Heartbeat watch progress recording (every 5 seconds)
   useEffect(() => {
@@ -264,14 +278,14 @@ export function DramaPlayerModal() {
   const isSaved = isInShelf(activeModalSeries.id);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/90 md:bg-black/80 backdrop-blur-xl animate-fade-in">
       {/* Modal Dialog Container */}
-      <div className="relative w-full max-w-6xl max-h-[96vh] apple-glass-heavy rounded-3xl border border-white/[0.12] shadow-2xl overflow-hidden flex flex-col md:flex-row">
+      <div className="relative w-full h-[100dvh] md:h-auto max-w-6xl md:max-h-[96vh] apple-glass-heavy rounded-none md:rounded-3xl border-0 md:border md:border-white/[0.12] shadow-2xl overflow-hidden flex flex-col md:flex-row">
         {/* Close Button */}
         <button
           type="button"
           onClick={closePlayerModal}
-          className="absolute top-4 right-4 z-50 p-2 rounded-full apple-glass-thin border border-white/10 text-white/72 hover:text-white hover:border-white/30 transition-all"
+          className="absolute top-3 right-3 z-50 p-2.5 rounded-full bg-black/60 md:bg-white/10 backdrop-blur-md border border-white/20 text-white/80 hover:text-white hover:border-white/40 transition-all shadow-lg"
           aria-label="Close Player"
         >
           <X className="w-5 h-5" strokeWidth={1.5} />
@@ -280,7 +294,7 @@ export function DramaPlayerModal() {
         {/* ============================================================ */}
         {/* LEFT COLUMN: 9:16 Vertical Video Player Stage                */}
         {/* ============================================================ */}
-        <div className="relative w-full md:w-[480px] lg:w-[520px] bg-black flex items-center justify-center flex-shrink-0 min-h-[460px] md:min-h-[640px] overflow-hidden">
+        <div className="relative w-full h-[46vh] sm:h-[48vh] md:h-[680px] lg:h-[750px] md:w-[460px] lg:w-[500px] bg-black flex items-center justify-center flex-shrink-0 overflow-hidden">
           {/* Blurred Ambient Backdrop for aspect ratio filling */}
           <div
             className="absolute inset-0 filter blur-3xl opacity-30 transform scale-125"
@@ -294,228 +308,262 @@ export function DramaPlayerModal() {
           {/* 9:16 Vertical Stage Box */}
           <div
             className="relative aspect-[9/16] h-full max-h-[750px] w-auto max-w-full flex items-center justify-center bg-black overflow-hidden shadow-2xl"
-            onClick={handlePlayerTap}
+            onClick={isEmbedMode ? undefined : handlePlayerTap}
           >
-            {/* HTML5 Video Element */}
-            <video
-              ref={videoRef}
-              playsInline
-              loop
-              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-              className="w-full h-full object-cover"
-              poster={activeEpisode?.video_pic || activeModalSeries.cover_pic}
-            />
+            {/* Quick Floating Server Switcher Pill on Top of Video Stage */}
+            <div
+              className="absolute top-3 left-3 z-30 flex items-center gap-1 p-1 rounded-full apple-glass-heavy border border-white/15 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-300 px-2 py-0.5">
+                <Zap size={11} className="text-amber-400" />
+                <span className="hidden sm:inline">SERVER</span>
+              </span>
+              {REEL_PROVIDERS.map((p) => {
+                const isActive = selectedServer === p.id;
+                const isHlsDisabled = p.id === 'hls-direct' && !directHlsAvailable;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={isHlsDisabled}
+                    onClick={() => setSelectedServer(p.id)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all flex items-center gap-1 ${
+                      isActive
+                        ? 'bg-rose-500 text-white shadow'
+                        : isHlsDisabled
+                          ? 'text-white/30 cursor-not-allowed'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-slate-500'}`} />
+                    <span>{p.name.split(' ')[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* Double Tap Ripple Animations (-5s / +5s) */}
-            {seekRipple && (
-              <div
-                className={`absolute top-1/2 -translate-y-1/2 pointer-events-none z-30 px-4 py-2 rounded-full apple-glass-heavy text-white font-bold text-sm flex items-center gap-1.5 animate-ping ${
-                  seekRipple === 'left' ? 'left-8' : 'right-8'
-                }`}
-              >
-                <FastForward className={`w-4 h-4 ${seekRipple === 'left' ? 'rotate-180' : ''}`} />
-                <span>{seekRipple === 'left' ? '-5s' : '+5s'}</span>
-              </div>
-            )}
+            {isEmbedMode ? (
+              /* ============================================================ */
+              /* EMBED STAGE: Sandboxed Official Web Player                   */
+              /* ============================================================ */
+              <iframe
+                key={`${activeEpisode?.id}-${selectedServer}`}
+                src={
+                  activeEpisode?.embed_url ||
+                  getOfficialEmbedUrl(activeModalSeries.id)
+                }
+                className="w-full h-full border-0"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                title={`${activeModalSeries.title} - Episode ${activeModalEpisodeIndex}`}
+              />
+            ) : (
+              /* ============================================================ */
+              /* NATIVE HLS STAGE: Direct .m3u8 CDN Stream                    */
+              /* ============================================================ */
+              <>
+                {/* HTML5 Video Element */}
+                <video
+                  ref={videoRef}
+                  playsInline
+                  loop
+                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                  className="w-full h-full object-cover"
+                  poster={activeEpisode?.video_pic || activeModalSeries.cover_pic}
+                />
 
-            {/* Play/Pause Center Indicator (visible when paused) */}
-            {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 bg-black/25">
-                <div className="w-16 h-16 rounded-full apple-glass-heavy border border-white/20 flex items-center justify-center shadow-xl text-white">
-                  <Play className="w-8 h-8 fill-white ml-1" strokeWidth={1.5} />
-                </div>
-              </div>
-            )}
+                {/* Double Tap Ripple Animations (-5s / +5s) */}
+                {seekRipple && (
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 pointer-events-none z-30 px-4 py-2 rounded-full apple-glass-heavy text-white font-bold text-sm flex items-center gap-1.5 animate-ping ${
+                      seekRipple === 'left' ? 'left-8' : 'right-8'
+                    }`}
+                  >
+                    <FastForward className={`w-4 h-4 ${seekRipple === 'left' ? 'rotate-180' : ''}`} />
+                    <span>{seekRipple === 'left' ? '-5s' : '+5s'}</span>
+                  </div>
+                )}
 
-            {/* Stream Error / Retry Overlay */}
-            {streamError && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/85 backdrop-blur-md">
-                <p className="type-meta text-white/88 mb-4 max-w-xs">{streamError}</p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
+                {/* Play/Pause Center Indicator (visible when paused) */}
+                {!isPlaying && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 bg-black/25">
+                    <div className="w-16 h-16 rounded-full apple-glass-heavy border border-white/20 flex items-center justify-center shadow-xl text-white">
+                      <Play className="w-8 h-8 fill-white ml-1" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Stream Error / Retry Overlay */}
+                {streamError && (
+                  <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/85 backdrop-blur-md">
+                    <p className="type-meta text-white/88 mb-4 max-w-xs">{streamError}</p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedServer('official-embed');
+                        }}
+                        className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-lg"
+                      >
+                        <Play className="w-4 h-4 fill-white" />
+                        <span>Switch to Official Web Stream</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Right Floating Action Dock */}
+                <div
+                  className="absolute right-2.5 md:right-3 bottom-16 md:bottom-24 z-20 flex flex-col items-center gap-2 md:gap-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Like Button */}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      loadDetail(true);
-                    }}
-                    className="px-5 py-2.5 rounded-full apple-glass-regular border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-white/10 transition-colors"
+                    onClick={() => setIsLiked(!isLiked)}
+                    className={`w-8 h-8 md:w-10 md:h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center transition-all ${
+                      isLiked ? 'text-rose-500 border-rose-500/40 bg-rose-500/10' : 'text-white/80 hover:text-white'
+                    }`}
+                    title="Like"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Refresh Stream</span>
+                    <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isLiked ? 'fill-rose-500' : ''}`} strokeWidth={1.5} />
                   </button>
-                  {episodes.find((ep) => !!ep.video_url && ep.episode_index !== activeModalEpisodeIndex) && (
+
+                  {/* Shelf / Bookmark Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleShelf(activeModalSeries)}
+                    className={`w-8 h-8 md:w-10 md:h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center transition-all ${
+                      isSaved ? 'text-amber-400 border-amber-400/40 bg-amber-400/10' : 'text-white/80 hover:text-white'
+                    }`}
+                    title="Add to Shelf"
+                  >
+                    {isSaved ? <Check className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} /> : <Bookmark className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} />}
+                  </button>
+
+                  {/* Mute Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMuted = !isMuted;
+                      setIsMuted(nextMuted);
+                      if (videoRef.current) videoRef.current.muted = nextMuted;
+                    }}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center text-white/80 hover:text-white"
+                    title={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5 text-rose-400" strokeWidth={1.5} /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} />}
+                  </button>
+
+                  {/* Fullscreen Button */}
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center text-white/80 hover:text-white"
+                    title="Fullscreen"
+                  >
+                    <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                {/* Bottom Scrim & HUD Controls */}
+                <div
+                  className="absolute inset-x-0 bottom-0 z-20 pt-8 pb-2 md:pb-4 px-3 md:px-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col gap-1.5 md:gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Title & Episode Badge */}
+                  <div className="flex items-center justify-between text-[11px] md:text-xs text-white/80">
+                    <span className="font-semibold truncate max-w-[200px]">
+                      {activeModalSeries.title} · Ep {activeModalEpisodeIndex}
+                    </span>
+                    <span className="type-meta text-white/60 tabular-nums">
+                      {formatTime(currentTime)} / {formatTime(duration || activeEpisode?.duration || 0)}
+                    </span>
+                  </div>
+
+                  {/* Custom Scrubber Bar */}
+                  <div
+                    ref={progressBarRef}
+                    onClick={handleScrub}
+                    className="group/scrub relative w-full h-1.5 md:h-2 rounded-full bg-white/20 cursor-pointer overflow-hidden"
+                  >
+                    <div
+                      className="h-full bg-rose-500 rounded-full relative"
+                      style={{
+                        width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Controls Row */}
+                  <div className="flex items-center justify-between pt-0.5 md:pt-1">
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <button
+                        type="button"
+                        disabled={activeModalEpisodeIndex <= 1}
+                        onClick={() => setActiveEpisodeIndex(activeModalEpisodeIndex - 1)}
+                        className="p-1 md:p-1.5 rounded-full hover:bg-white/10 text-white/80 disabled:opacity-30 disabled:hover:bg-transparent"
+                        title="Previous Episode"
+                      >
+                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={togglePlay}
+                        className="p-1.5 md:p-2 rounded-full apple-glass-thin border border-white/10 text-white hover:bg-white/20"
+                        title={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        {isPlaying ? <Pause className="w-3.5 h-3.5 md:w-4 md:h-4 fill-white" /> : <Play className="w-3.5 h-3.5 md:w-4 md:h-4 fill-white ml-0.5" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={activeModalEpisodeIndex >= episodes.length}
+                        onClick={() => setActiveEpisodeIndex(activeModalEpisodeIndex + 1)}
+                        className="p-1 md:p-1.5 rounded-full hover:bg-white/10 text-white/80 disabled:opacity-30 disabled:hover:bg-transparent"
+                        title="Next Episode"
+                      >
+                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} />
+                      </button>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const nextWithStream = episodes.find((ep) => !!ep.video_url && ep.video_url.includes('.m3u8'));
-                        if (nextWithStream) {
-                          setActiveEpisodeIndex(nextWithStream.episode_index);
-                        }
-                      }}
-                      className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-2 transition-colors"
+                      onClick={cycleSpeed}
+                      className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md apple-glass-thin border border-white/10 text-[10px] md:text-[11px] font-bold text-white/90 hover:text-white"
                     >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>Play Available Episode</span>
+                      {playbackRate}x
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Right Floating Action Dock */}
-            <div
-              className="absolute right-3 bottom-24 z-20 flex flex-col items-center gap-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Like Button */}
-              <button
-                type="button"
-                onClick={() => setIsLiked(!isLiked)}
-                className={`w-10 h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center transition-all ${
-                  isLiked ? 'text-rose-500 border-rose-500/40 bg-rose-500/10' : 'text-white/80 hover:text-white'
-                }`}
-                title="Like"
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? 'fill-rose-500' : ''}`} strokeWidth={1.5} />
-              </button>
-
-              {/* Shelf / Bookmark Button */}
-              <button
-                type="button"
-                onClick={() => toggleShelf(activeModalSeries)}
-                className={`w-10 h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center transition-all ${
-                  isSaved ? 'text-amber-400 border-amber-400/40 bg-amber-400/10' : 'text-white/80 hover:text-white'
-                }`}
-                title="Add to Shelf"
-              >
-                {isSaved ? <Check className="w-5 h-5" strokeWidth={1.5} /> : <Bookmark className="w-5 h-5" strokeWidth={1.5} />}
-              </button>
-
-              {/* Mute Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const nextMuted = !isMuted;
-                  setIsMuted(nextMuted);
-                  if (videoRef.current) videoRef.current.muted = nextMuted;
-                }}
-                className="w-10 h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center text-white/80 hover:text-white"
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" strokeWidth={1.5} /> : <Volume2 className="w-5 h-5" strokeWidth={1.5} />}
-              </button>
-
-              {/* Fullscreen Button */}
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="w-10 h-10 rounded-full apple-glass-regular border border-white/10 flex items-center justify-center text-white/80 hover:text-white"
-                title="Fullscreen"
-              >
-                <Maximize className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* Bottom Scrim & HUD Controls */}
-            <div
-              className="absolute inset-x-0 bottom-0 z-20 pt-10 pb-4 px-4 bg-gradient-to-t from-black via-black/70 to-transparent flex flex-col gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Title & Episode Badge */}
-              <div className="flex items-center justify-between text-xs text-white/80">
-                <span className="font-semibold truncate max-w-[200px]">
-                  {activeModalSeries.title} · Ep {activeModalEpisodeIndex}
-                </span>
-                <span className="type-meta text-white/60 tabular-nums">
-                  {formatTime(currentTime)} / {formatTime(duration || activeEpisode?.duration || 0)}
-                </span>
-              </div>
-
-              {/* Custom Scrubber Bar */}
-              <div
-                ref={progressBarRef}
-                onClick={handleScrub}
-                className="group/scrub relative w-full h-2 rounded-full bg-white/20 cursor-pointer overflow-hidden"
-              >
-                <div
-                  className="h-full bg-rose-500 rounded-full relative"
-                  style={{
-                    width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
-                  }}
-                />
-              </div>
-
-              {/* Controls Row */}
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2">
-                  {/* Previous Episode */}
-                  <button
-                    type="button"
-                    disabled={activeModalEpisodeIndex <= 1}
-                    onClick={() => setActiveEpisodeIndex(activeModalEpisodeIndex - 1)}
-                    className="p-1.5 rounded-full hover:bg-white/10 text-white/80 disabled:opacity-30 disabled:hover:bg-transparent"
-                    title="Previous Episode"
-                  >
-                    <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
-                  </button>
-
-                  {/* Play / Pause Toggle */}
-                  <button
-                    type="button"
-                    onClick={togglePlay}
-                    className="p-2 rounded-full apple-glass-thin border border-white/10 text-white hover:bg-white/20"
-                    title={isPlaying ? 'Pause' : 'Play'}
-                  >
-                    {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
-                  </button>
-
-                  {/* Next Episode */}
-                  <button
-                    type="button"
-                    disabled={activeModalEpisodeIndex >= episodes.length}
-                    onClick={() => setActiveEpisodeIndex(activeModalEpisodeIndex + 1)}
-                    className="p-1.5 rounded-full hover:bg-white/10 text-white/80 disabled:opacity-30 disabled:hover:bg-transparent"
-                    title="Next Episode"
-                  >
-                    <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
-                  </button>
-                </div>
-
-                {/* Playback Speed Cycle Button */}
-                <button
-                  type="button"
-                  onClick={cycleSpeed}
-                  className="px-2.5 py-1 rounded-md apple-glass-thin border border-white/10 text-[11px] font-bold text-white/90 hover:text-white"
-                >
-                  {playbackRate}x
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* ============================================================ */}
         {/* RIGHT COLUMN: Series Details & Episode Playlist             */}
         {/* ============================================================ */}
-        <div className="flex-1 flex flex-col min-w-0 h-[480px] md:h-[640px] lg:h-[750px] p-6 lg:p-8 overflow-hidden bg-[#0a0b0f]/80">
+        <div className="flex-1 flex flex-col min-w-0 h-[54vh] sm:h-[52vh] md:h-[680px] lg:h-[750px] p-4 sm:p-6 lg:p-8 overflow-hidden bg-[#0a0b0f]/95 md:bg-[#0a0b0f]/80">
           {/* Series Meta Info */}
-          <div className="border-b border-white/[0.08] pb-5 mb-5 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-xs font-semibold border border-rose-500/30">
-                DramaBox Series
+          <div className="border-b border-white/[0.08] pb-3 md:pb-5 mb-3 md:mb-5 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-1.5 md:mb-2">
+              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] sm:text-xs font-semibold border border-amber-500/30">
+                CineBai Series
               </span>
-              <span className="type-meta text-xs text-white/48">
-                {episodes.length || activeModalSeries.chapter_count} Total Episodes
+              <span className="type-meta text-[11px] sm:text-xs text-white/48">
+                {episodes.length || activeModalSeries.chapter_count} Episodes · 100% Free
               </span>
             </div>
 
-            <h2 className="text-2xl font-bold tracking-tight text-white line-clamp-1 mb-2">
+            <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white line-clamp-1 mb-1 md:mb-2">
               {activeModalSeries.title}
             </h2>
 
-            <p className="type-body text-xs sm:text-sm text-white/60 line-clamp-3 leading-relaxed mb-3">
+            <p className="type-body text-xs sm:text-sm text-white/60 line-clamp-2 md:line-clamp-3 leading-relaxed mb-2 md:mb-3">
               {activeModalSeries.description}
             </p>
 
@@ -524,21 +572,68 @@ export function DramaPlayerModal() {
               {activeModalSeries.theme?.map((t) => (
                 <span
                   key={t}
-                  className="px-2 py-0.5 rounded bg-white/[0.06] text-white/72 text-xs border border-white/[0.06]"
+                  className="px-2 py-0.5 rounded bg-white/[0.06] text-white/72 text-[10px] sm:text-xs border border-white/[0.06]"
                 >
                   {t}
                 </span>
               ))}
             </div>
+
+            {/* Multi-Provider Streaming Selector */}
+            <div className="mt-3 p-3 rounded-2xl apple-glass-thin border border-white/[0.08] flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white/90 flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-amber-400" />
+                  Streaming Server
+                </span>
+                <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  100% Free · Unlocked
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {REEL_PROVIDERS.map((provider) => {
+                  const isCurrent = selectedServer === provider.id;
+                  const isHlsDisabled = provider.id === 'hls-direct' && !directHlsAvailable;
+
+                  return (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      disabled={isHlsDisabled}
+                      onClick={() => setSelectedServer(provider.id)}
+                      className={`px-2.5 py-1.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
+                        isCurrent
+                          ? 'apple-glass-heavy border-rose-500/60 bg-rose-500/15 shadow-sm'
+                          : isHlsDisabled
+                            ? 'border-white/[0.04] bg-white/[0.02] opacity-40 cursor-not-allowed'
+                            : 'border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-semibold truncate ${isCurrent ? 'text-rose-400' : 'text-white'}`}>
+                          {provider.name.split(' ')[0]}
+                        </span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-rose-400 animate-pulse' : 'bg-slate-500'}`} />
+                      </div>
+                      <span className="text-[9px] text-white/50 truncate mt-0.5">
+                        {isHlsDisabled ? 'Embed fallback' : provider.badge || 'Available'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Episode Playlist Header */}
-          <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <h3 className="type-section-title text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-rose-400" strokeWidth={1.5} />
+          <div className="flex items-center justify-between mb-2 md:mb-3 flex-shrink-0">
+            <h3 className="type-section-title text-xs sm:text-base font-bold text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
               <span>Episodes</span>
             </h3>
-            <span className="type-meta text-xs text-white/48">
+            <span className="type-meta text-[11px] sm:text-xs text-white/48">
               Now Playing: Ep {activeModalEpisodeIndex}
             </span>
           </div>

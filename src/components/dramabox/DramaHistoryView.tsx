@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Clock, Bookmark, Play, Trash2, LogIn } from 'lucide-react';
+import { Clock, Bookmark, Play, Trash2 } from 'lucide-react';
 import { useDramaBoxStore } from '../../stores/dramaboxStore';
 import { DramaCard } from './DramaCard';
 
@@ -14,14 +14,12 @@ export function DramaHistoryView() {
     shelf,
     clearHistory,
     openPlayerModal,
-    user,
-    setAuthModalOpen,
   } = useDramaBoxStore();
 
   const [activeSubTab, setActiveSubTab] = useState<'history' | 'shelf'>('history');
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-28 animate-fade-in">
       {/* Header */}
       <div className="border-b border-white/[0.08] pb-6 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -70,19 +68,9 @@ export function DramaHistoryView() {
                 <Clock className="w-7 h-7" strokeWidth={1.5} />
               </div>
               <h2 className="text-lg font-bold text-white mb-2">No Watch History Yet</h2>
-              <p className="type-meta text-white/60 mb-6 text-sm">
+              <p className="type-meta text-white/60 text-sm">
                 Your watched episodes will appear here automatically with resume points.
               </p>
-              {!user && (
-                <button
-                  type="button"
-                  onClick={() => setAuthModalOpen(true)}
-                  className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Sign In to Sync Across Devices
-                </button>
-              )}
             </div>
           ) : (
             <div className="space-y-4">

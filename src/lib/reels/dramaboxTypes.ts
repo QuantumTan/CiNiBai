@@ -20,7 +20,9 @@ export interface DramaEpisode {
   episode_index: number;
   title: string;
   duration: number; // in seconds
-  video_url: string; // Live HLS stream (.m3u8)
+  video_url: string; // Live HLS stream (.m3u8) or web embed
+  m3u8_url?: string; // Direct HLS stream (.m3u8)
+  embed_url?: string; // Official web embed player
   video_pic: string; // Snapshot cover
   is_paid: boolean;
   coin_cost: number;

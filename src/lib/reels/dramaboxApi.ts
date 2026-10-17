@@ -5,6 +5,8 @@ import type {
   DramaUser,
 } from './dramaboxTypes';
 import { DRAMABOX_DRAMAS } from '../../data/dramaboxData';
+import { REELSHORT_DRAMAS } from '../../data/reelshortData';
+import { getOfficialEmbedUrl, isEmbedUrl } from '../../api/reelsProviders';
 import { scrapeLiveCatalog, scrapeDramaDetail } from './reelsScraperService';
 
 export const VERIFIED_SHORT_DRAMA_STREAMS = [
@@ -106,27 +108,52 @@ export const VERIFIED_SHORT_DRAMA_STREAMS = [
 ];
 
 /**
- * Deterministically resolves a verified working .m3u8 stream for a given drama and episode index.
- * Prevents identical video playback across different series.
+ * Resolves an authentic working stream (.m3u8 CDN stream or official web player) for a given drama and episode index.
+ * Completely eliminates cross-series randomized swapping.
  */
 export function getStreamForDrama(seriesId: string, episodeIndex = 1): string {
-  // Check exact ID match for episode 1
-  const exactMatch = VERIFIED_SHORT_DRAMA_STREAMS.find(
+  // 1. Check verified .m3u8 CDN catalog
+  const verifiedMatch = VERIFIED_SHORT_DRAMA_STREAMS.find(
     (s) => s.id === seriesId || seriesId.includes(s.id)
   );
-  if (exactMatch && episodeIndex === 1) {
-    return exactMatch.streamUrl;
+  if (verifiedMatch && episodeIndex === 1) {
+    return verifiedMatch.streamUrl;
   }
 
-  // Deterministically hash seriesId + episodeIndex to select distinct stream from the pool
-  let hash = 0;
-  const seed = `${seriesId}:${episodeIndex}`;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
+  // 2. Check ReelShort curated catalog for authentic episode stream or embed
+  const reelshortMatch = REELSHORT_DRAMAS.find(
+    (d) => d.id === seriesId || d.bookId === seriesId || seriesId.includes(d.id)
+  );
+  if (reelshortMatch) {
+    const ep = reelshortMatch.episodes?.find((e) => e.episodeNumber === episodeIndex);
+    if (ep?.m3u8Url && ep.m3u8Url.includes('.m3u8')) {
+      return ep.m3u8Url;
+    }
+    if (ep?.videoUrl && ep.videoUrl.includes('.m3u8')) {
+      return ep.videoUrl;
+    }
+    return reelshortMatch.embedUrl || getOfficialEmbedUrl(reelshortMatch.id, reelshortMatch.chapterId || '1y6ssuu6');
   }
-  const index = Math.abs(hash) % VERIFIED_SHORT_DRAMA_STREAMS.length;
-  return VERIFIED_SHORT_DRAMA_STREAMS[index].streamUrl;
+
+  // 3. Check DramaBox curated catalog
+  const dramaBoxMatch = DRAMABOX_DRAMAS.find(
+    (d) => d.id === seriesId || d.bookId === seriesId || seriesId.includes(d.id)
+  );
+  if (dramaBoxMatch) {
+    const ep = dramaBoxMatch.episodes?.find((e: any) => e.episodeNumber === episodeIndex);
+    if (ep?.m3u8Url && ep.m3u8Url.includes('.m3u8')) return ep.m3u8Url;
+    if (ep?.videoUrl && ep.videoUrl.includes('.m3u8')) return ep.videoUrl;
+    if (ep?.videoUrl && !isEmbedUrl(ep.videoUrl)) return ep.videoUrl;
+    return getOfficialEmbedUrl(dramaBoxMatch.id);
+  }
+
+  // 4. If series ID exists in verified pool, keep its stream consistent
+  if (verifiedMatch) {
+    return verifiedMatch.streamUrl;
+  }
+
+  // 5. Default to the series's own official embed stream
+  return getOfficialEmbedUrl(seriesId);
 }
 
 function toDramaSeries(d: any): DramaSeries {
@@ -163,14 +190,17 @@ export const dramaboxApi = {
   /**
    * Fetch full catalog / All Movies with pagination
    */
-  async getAllMovies(page = 1): Promise<{ items: DramaSeries[]; page: number }> {
+  async getAllMovies(page = 1, pageSize = 24): Promise<{ items: DramaSeries[]; page: number; total: number; totalPages: number }> {
     const catalog = await scrapeLiveCatalog();
-    const safePage = Math.max(1, page);
-    const pageSize = 24;
+    const total = catalog.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, page), totalPages);
     const start = (safePage - 1) * pageSize;
     return {
       items: catalog.slice(start, start + pageSize),
       page: safePage,
+      total,
+      totalPages,
     };
   },
 
@@ -248,11 +278,17 @@ export const dramaboxApi = {
 
     const episodes = rawEpisodes.map((ep: any, idx: number) => {
       const epNum = ep.episodeNumber || idx + 1;
-      const finalUrl = (ep.videoUrl && ep.videoUrl.trim().length > 0)
+      const m3u8Candidate = (ep.m3u8Url && ep.m3u8Url.includes('.m3u8'))
+        ? ep.m3u8Url
+        : (ep.videoUrl && ep.videoUrl.includes('.m3u8'))
+          ? ep.videoUrl
+          : undefined;
+
+      const embedCandidate = (ep.videoUrl && isEmbedUrl(ep.videoUrl))
         ? ep.videoUrl
-        : (ep.m3u8Url && ep.m3u8Url.trim().length > 0)
-          ? ep.m3u8Url
-          : getStreamForDrama(series.id, epNum);
+        : getOfficialEmbedUrl(series.id);
+
+      const finalUrl = m3u8Candidate || embedCandidate || getStreamForDrama(series.id, epNum);
 
       return {
         id: ep.id || `${series.id}-${epNum}`,
@@ -261,6 +297,8 @@ export const dramaboxApi = {
         title: ep.title || `Episode ${epNum}`,
         duration: 90,
         video_url: finalUrl,
+        m3u8_url: m3u8Candidate,
+        embed_url: embedCandidate,
         video_pic: ep.thumbnail || series.cover_pic,
         is_unlocked: true,
         is_paid: false,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Film, 
   Sparkles, 
@@ -16,6 +16,7 @@ import { useDramaBoxStore } from '../../stores/dramaboxStore';
 import type { DramaViewTab } from '../../lib/reels/dramaboxTypes';
 
 export function DramaNavbar() {
+  const navigate = useNavigate();
   const { 
     activeTab, 
     setActiveTab, 
@@ -23,6 +24,12 @@ export function DramaNavbar() {
   } = useDramaBoxStore();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleTabSelect = (tab: DramaViewTab) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+    navigate(tab === 'infinite-feed' ? '/reels' : `/reels?tab=${tab}`);
+  };
 
   const navItems: { tab: DramaViewTab; label: string; icon: React.ElementType }[] = [
     { tab: 'infinite-feed', label: 'Reels Feed', icon: Play },
@@ -48,7 +55,7 @@ export function DramaNavbar() {
 
           <button 
             type="button"
-            onClick={() => setActiveTab('infinite-feed')}
+            onClick={() => handleTabSelect('infinite-feed')}
             className="flex items-center gap-2.5 group focus:outline-none"
           >
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-900/20 group-hover:scale-105 transition-transform duration-200">
@@ -75,7 +82,7 @@ export function DramaNavbar() {
               <button
                 key={item.tab}
                 type="button"
-                onClick={() => setActiveTab(item.tab)}
+                onClick={() => handleTabSelect(item.tab)}
                 className={`relative px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
                   isActive
                     ? 'text-white bg-white/[0.12] shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]'
@@ -134,10 +141,7 @@ export function DramaNavbar() {
               <button
                 key={item.tab}
                 type="button"
-                onClick={() => {
-                  setActiveTab(item.tab);
-                  setMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabSelect(item.tab)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-white/15 text-white' : 'text-white/72 hover:bg-white/5 hover:text-white'
                 }`}

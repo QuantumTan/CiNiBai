@@ -6,7 +6,9 @@
  */
 import type { DramaSeries } from './dramaboxTypes';
 import { getStreamForDrama } from './dramaboxApi';
+import { getOfficialEmbedUrl, isEmbedUrl } from '../../api/reelsProviders';
 import { DRAMABOX_DRAMAS } from '../../data/dramaboxData';
+import { REELSHORT_DRAMAS } from '../../data/reelshortData';
 
 export interface ScrapedDramaItem {
   id: string;
@@ -113,24 +115,49 @@ function parseSsrToDramaSeries(nextData: any): DramaSeries[] {
 }
 
 /**
- * Convert local curated catalog (DRAMABOX_DRAMAS) to DramaSeries
+ * Convert full curated catalogs (REELSHORT_DRAMAS + DRAMABOX_DRAMAS) to DramaSeries
  */
 function getCuratedDramaSeries(): DramaSeries[] {
-  return DRAMABOX_DRAMAS.map((d) => ({
-    id: d.id,
-    title: d.title,
-    cover_pic: d.coverImage || d.verticalPoster,
-    description: d.synopsis || d.tagline,
-    chapter_count: d.totalEpisodes || 40,
-    read_count: d.readCount || 650000,
-    collect_count: d.collectCount || 28000,
-    theme: d.tags || ['DramaBox', 'Trending'],
-  }));
+  const map = new Map<string, DramaSeries>();
+
+  // 1. ReelShort 125 micro-dramas
+  for (const d of REELSHORT_DRAMAS) {
+    if (!d || !d.id) continue;
+    map.set(d.id, {
+      id: d.id,
+      title: d.title,
+      cover_pic: d.verticalPoster || d.coverImage,
+      description: d.synopsis || d.tagline || `Watch "${d.title}" 100% free on CineBai.`,
+      chapter_count: d.totalEpisodes || (d.episodes ? d.episodes.length : 40),
+      read_count: d.readCount || 850000,
+      collect_count: d.collectCount || 42000,
+      theme: d.tags || d.categories || ['Trending', 'ReelShort'],
+    });
+  }
+
+  // 2. DramaBox curated dramas
+  for (const d of DRAMABOX_DRAMAS) {
+    if (!d || !d.id) continue;
+    if (!map.has(d.id)) {
+      map.set(d.id, {
+        id: d.id,
+        title: d.title,
+        cover_pic: d.coverImage || d.verticalPoster,
+        description: d.synopsis || d.tagline || `Watch "${d.title}" 100% free on CineBai.`,
+        chapter_count: d.totalEpisodes || 40,
+        read_count: d.readCount || 650000,
+        collect_count: d.collectCount || 28000,
+        theme: d.tags || ['DramaBox', 'Trending'],
+      });
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 /**
  * Scrape live short drama catalog.
- * Merges freshly scraped SSR items with curated catalog, ensuring all streams are unique and 100% free.
+ * Merges freshly scraped SSR items with curated catalog (155+ dramas), ensuring all streams are unique and 100% free.
  */
 export async function scrapeLiveCatalog(): Promise<DramaSeries[]> {
   const now = Date.now();
@@ -179,16 +206,47 @@ export async function scrapeDramaDetail(seriesId: string) {
   const catalog = await scrapeLiveCatalog();
   const matched = catalog.find((c) => c.id === seriesId) || catalog[0];
 
-  const episodes = Array.from({ length: Math.min(60, matched.chapter_count) }).map((_, idx) => {
-    const epNum = idx + 1;
+  // Check if we have rich episode metadata from REELSHORT_DRAMAS or DRAMABOX_DRAMAS
+  const richReelshort = REELSHORT_DRAMAS.find((d) => d.id === seriesId || d.bookId === seriesId);
+  const richDramabox = DRAMABOX_DRAMAS.find((d) => d.id === seriesId || d.bookId === seriesId);
+  const richSource = richReelshort || richDramabox;
+
+  const totalCount = richSource?.totalEpisodes || matched.chapter_count || 40;
+  const rawEpisodes = richSource?.episodes && richSource.episodes.length > 0
+    ? richSource.episodes
+    : Array.from({ length: Math.min(80, totalCount) }).map((_, idx) => ({
+        id: `${matched.id}-ep${idx + 1}`,
+        episodeNumber: idx + 1,
+        title: `Episode ${idx + 1}`,
+        duration: '1:30',
+        videoUrl: getStreamForDrama(matched.id, idx + 1),
+        thumbnail: matched.cover_pic,
+      }));
+
+  const episodes = rawEpisodes.map((ep: any, idx: number) => {
+    const epNum = ep.episodeNumber || idx + 1;
+    const m3u8Candidate = (ep.m3u8Url && ep.m3u8Url.includes('.m3u8'))
+      ? ep.m3u8Url
+      : (ep.videoUrl && ep.videoUrl.includes('.m3u8'))
+        ? ep.videoUrl
+        : undefined;
+
+    const embedCandidate = (ep.videoUrl && isEmbedUrl(ep.videoUrl))
+      ? ep.videoUrl
+      : getOfficialEmbedUrl(matched.id, richReelshort?.chapterId || '1y6ssuu6');
+
+    const finalStream = m3u8Candidate || embedCandidate || getStreamForDrama(matched.id, epNum);
+
     return {
-      id: `${matched.id}-ep${epNum}`,
+      id: ep.id || `${matched.id}-ep${epNum}`,
       series_id: matched.id,
       episode_index: epNum,
-      title: `Episode ${epNum}`,
-      duration: 90,
-      video_url: getStreamForDrama(matched.id, epNum),
-      video_pic: matched.cover_pic,
+      title: ep.title || `Episode ${epNum}`,
+      duration: typeof ep.duration === 'number' ? ep.duration : 90,
+      video_url: finalStream,
+      m3u8_url: m3u8Candidate,
+      embed_url: embedCandidate,
+      video_pic: ep.thumbnail || matched.cover_pic,
       is_unlocked: true,
       is_paid: false,
       coin_cost: 0,
