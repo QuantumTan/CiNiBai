@@ -1,4 +1,6 @@
 import { DRAMABOX_DRAMAS } from '../data/dramaboxData';
+import { getStreamForDrama } from '../lib/reels/dramaboxApi';
+import { scrapeLiveCatalog, scrapeDramaDetail } from '../lib/reels/reelsScraperService';
 export { fetchReelsFeed } from '../lib/reels/api';
 export type { ReelItem } from '../lib/reels/types';
 
@@ -154,7 +156,7 @@ export function transform7xmSeries(item: any, defaultCategory: string = 'Trendin
 }
 
 /**
- * Fetch Trending series from https://apireel.7xm.dev/api/series/trending.php
+ * Fetch Trending series via Live Scraper Service
  */
 export async function fetchLiveTrendingSeries(): Promise<ReelDrama[]> {
   if (cachedTrending && cachedTrending.length > 0) {
@@ -162,26 +164,20 @@ export async function fetchLiveTrendingSeries(): Promise<ReelDrama[]> {
   }
 
   try {
-    const res = await fetch('https://apireel.7xm.dev/api/series/trending.php', {
-      headers: { Accept: 'application/json' },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      const rawList = json.data;
-      if (Array.isArray(rawList) && rawList.length > 0) {
-        const transformed = rawList.map((item: any) => transform7xmSeries(item, 'Trending'));
-        const map = new Map<string, ReelDrama>();
-        for (const d of transformed) {
+    const rawList = await scrapeLiveCatalog();
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      const transformed = rawList.map((item: any) => transform7xmSeries(item, 'Trending'));
+      const map = new Map<string, ReelDrama>();
+      for (const d of transformed) {
+        map.set(d.id, d);
+      }
+      for (const d of DRAMABOX_DRAMAS) {
+        if (!map.has(d.id)) {
           map.set(d.id, d);
         }
-        for (const d of DRAMABOX_DRAMAS) {
-          if (!map.has(d.id)) {
-            map.set(d.id, d);
-          }
-        }
-        cachedTrending = Array.from(map.values());
-        return cachedTrending;
       }
+      cachedTrending = Array.from(map.values());
+      return cachedTrending;
     }
   } catch {
     // Graceful fallback to curated catalog
@@ -192,7 +188,7 @@ export async function fetchLiveTrendingSeries(): Promise<ReelDrama[]> {
 }
 
 /**
- * Fetch New Releases from https://apireel.7xm.dev/api/series/new-release.php
+ * Fetch New Releases via Live Scraper Service
  */
 export async function fetchLiveNewReleases(page: number = 1): Promise<ReelDrama[]> {
   if (cachedNewReleases && page === 1) {
@@ -200,19 +196,13 @@ export async function fetchLiveNewReleases(page: number = 1): Promise<ReelDrama[
   }
 
   try {
-    const res = await fetch(`https://apireel.7xm.dev/api/series/new-release.php?page=${page}`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      const rawList = json.items || json.data;
-      if (Array.isArray(rawList) && rawList.length > 0) {
-        const transformed = rawList.map((item: any) => transform7xmSeries(item, 'New Releases'));
-        if (page === 1) {
-          cachedNewReleases = transformed;
-        }
-        return transformed;
+    const rawList = await scrapeLiveCatalog();
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      const transformed = rawList.slice(6).map((item: any) => transform7xmSeries(item, 'New Releases'));
+      if (page === 1) {
+        cachedNewReleases = transformed;
       }
+      return transformed;
     }
   } catch {
     // Fallback
@@ -224,7 +214,7 @@ export async function fetchLiveNewReleases(page: number = 1): Promise<ReelDrama[
 }
 
 /**
- * Fetch All Movies / Catalog from https://apireel.7xm.dev/api/series/all-movies.php
+ * Fetch All Movies / Catalog via Live Scraper Service
  */
 export async function fetchLiveAllMovies(page: number = 1): Promise<ReelDrama[]> {
   if (cachedAllMovies && page === 1) {
@@ -232,25 +222,19 @@ export async function fetchLiveAllMovies(page: number = 1): Promise<ReelDrama[]>
   }
 
   try {
-    const res = await fetch(`https://apireel.7xm.dev/api/series/all-movies.php?page=${page}`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      const rawList = json.items || json.data;
-      if (Array.isArray(rawList) && rawList.length > 0) {
-        const transformed = rawList.map((item: any) => transform7xmSeries(item, 'All'));
-        if (page === 1) {
-          const map = new Map<string, ReelDrama>();
-          for (const d of transformed) map.set(d.id, d);
-          for (const d of DRAMABOX_DRAMAS) {
-            if (!map.has(d.id)) map.set(d.id, d);
-          }
-          cachedAllMovies = Array.from(map.values());
-          return cachedAllMovies;
+    const rawList = await scrapeLiveCatalog();
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      const transformed = rawList.map((item: any) => transform7xmSeries(item, 'All'));
+      if (page === 1) {
+        const map = new Map<string, ReelDrama>();
+        for (const d of transformed) map.set(d.id, d);
+        for (const d of DRAMABOX_DRAMAS) {
+          if (!map.has(d.id)) map.set(d.id, d);
         }
-        return transformed;
+        cachedAllMovies = Array.from(map.values());
+        return cachedAllMovies;
       }
+      return transformed;
     }
   } catch {
     // Fallback
@@ -277,56 +261,61 @@ export async function fetchSeriesDetailWithEpisodes(
     DRAMABOX_DRAMAS.find((d) => d.id === seriesId || d.id === `db-${seriesId}` || d.bookId === cleanId);
 
   try {
-    const detailUrl = `https://apireel.7xm.dev/api/series/detail.php?id=${encodeURIComponent(cleanId)}&refresh_stream=1`;
-    const res = await fetch(detailUrl, { headers: { Accept: 'application/json' } });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.series && Array.isArray(json.episodes) && json.episodes.length > 0) {
-        const s = json.series;
-        const mappedEpisodes: ReelEpisode[] = json.episodes.map((ep: any, idx: number) => {
-          const epNum = ep.episode_index || idx + 1;
-          const hasStream = !!ep.video_url && ep.video_url.trim().length > 0;
-          const isHls = hasStream && ep.video_url.includes('.m3u8');
+    const detail = await scrapeDramaDetail(cleanId);
+    if (detail && detail.series && Array.isArray(detail.episodes) && detail.episodes.length > 0) {
+      const s = detail.series;
+      const mappedEpisodes: ReelEpisode[] = detail.episodes.map((ep: any, idx: number) => {
+        const epNum = ep.episode_index || idx + 1;
+        const stream = ep.video_url || getStreamForDrama(cleanId, epNum);
+        return {
+          id: String(ep.id || `${cleanId}-${epNum}`),
+          episodeNumber: epNum,
+          title: ep.title || `Episode ${epNum}`,
+          duration: formatDuration(ep.duration),
+          videoUrl: stream,
+          m3u8Url: stream,
+          videoType: 'hls',
+          thumbnail: ep.video_pic || s.cover_pic || '',
+          likes: Math.floor(1000 + Math.random() * 5000),
+          commentsCount: Math.floor(50 + Math.random() * 300),
+          isUnlocked: true,
+        };
+      });
 
-          return {
-            id: String(ep.id || `${cleanId}-${epNum}`),
-            episodeNumber: epNum,
-            title: ep.title || `Episode ${epNum}`,
-            duration: formatDuration(ep.duration),
-            videoUrl: hasStream ? ep.video_url : '',
-            m3u8Url: isHls ? ep.video_url : undefined,
-            videoType: isHls ? 'hls' : 'mp4',
-            thumbnail: ep.video_pic || s.cover_pic || '',
-            likes: Math.floor(1000 + Math.random() * 5000),
-            commentsCount: Math.floor(50 + Math.random() * 300),
-            isUnlocked: true,
-          };
-        });
-
-        cachedEpisodes[seriesId] = mappedEpisodes;
-        const transformedDrama = transform7xmSeries(s);
-        transformedDrama.episodes = mappedEpisodes;
-        return { drama: transformedDrama, episodes: mappedEpisodes };
-      }
+      cachedEpisodes[seriesId] = mappedEpisodes;
+      const transformedDrama = transform7xmSeries(s);
+      transformedDrama.episodes = mappedEpisodes;
+      return { drama: transformedDrama, episodes: mappedEpisodes };
     }
   } catch {
     // Continue to fallback
   }
 
   if (existingDrama && existingDrama.episodes && existingDrama.episodes.length > 0) {
-    cachedEpisodes[seriesId] = existingDrama.episodes;
-    return { drama: existingDrama, episodes: existingDrama.episodes };
+    const populated = existingDrama.episodes.map((ep) => {
+      const stream = ep.videoUrl || ep.m3u8Url || getStreamForDrama(cleanId, ep.episodeNumber);
+      return {
+        ...ep,
+        videoUrl: stream,
+        m3u8Url: stream,
+        isUnlocked: true,
+      };
+    });
+    cachedEpisodes[seriesId] = populated;
+    return { drama: { ...existingDrama, episodes: populated }, episodes: populated };
   }
 
   const fallbackCount = existingDrama?.totalEpisodes || 40;
   const genEpisodes: ReelEpisode[] = [];
   for (let i = 1; i <= fallbackCount; i++) {
+    const stream = getStreamForDrama(cleanId, i);
     genEpisodes.push({
       id: `${cleanId}-${i}`,
       episodeNumber: i,
       title: `Episode ${i}`,
       duration: '1:30',
-      videoUrl: '',
+      videoUrl: stream,
+      m3u8Url: stream,
       videoType: 'hls',
       thumbnail: existingDrama?.coverImage || '',
       likes: 1200 + i * 20,

@@ -63,7 +63,6 @@ export function DramaPlayerModal() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null);
 
   // Fetch full series detail and episodes on open
   const loadDetail = useCallback(async (refresh = false) => {
@@ -206,15 +205,12 @@ export function DramaPlayerModal() {
     }
   };
 
-  // Handle Double Tap to Seek (-5s / +5s)
+  // Handle Single Tap (Play/Pause) and Double Tap to Seek (-5s / +5s) with 0 latency
   const handlePlayerTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const side = x < rect.width / 2 ? 'left' : 'right';
-    const now = Date.now();
-
-    if (lastTapRef.current && now - lastTapRef.current.time < 300 && lastTapRef.current.side === side) {
-      // Double tap detected
+    if (e.detail === 2) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const side = x < rect.width / 2 ? 'left' : 'right';
       const video = videoRef.current;
       if (video) {
         const delta = side === 'left' ? -5 : 5;
@@ -222,15 +218,11 @@ export function DramaPlayerModal() {
         setSeekRipple(side);
         setTimeout(() => setSeekRipple(null), 500);
       }
-      lastTapRef.current = null;
-    } else {
-      lastTapRef.current = { time: now, side };
-      // Single tap toggle play after short debounce
-      setTimeout(() => {
-        if (!lastTapRef.current) return;
-        togglePlay();
-        lastTapRef.current = null;
-      }, 300);
+      return;
+    }
+
+    if (e.detail === 1) {
+      togglePlay();
     }
   };
 

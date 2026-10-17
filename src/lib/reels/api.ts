@@ -8,9 +8,8 @@ import type {
   ReelsPage,
 } from './types';
 import { INITIAL_REELS_CATALOG } from './mockData';
-
-const API_BASE = 'https://apireel.7xm.dev';
-const REQUEST_TIMEOUT_MS = 25_000;
+import { scrapeLiveCatalog } from './reelsScraperService';
+import { getStreamForDrama } from './dramaboxApi';
 
 interface ReelsFeedParams {
   cursor?: string | null;
@@ -21,116 +20,8 @@ interface ReelsFeedParams {
   signal?: AbortSignal;
 }
 
-interface RawSeries {
-  id: string;
-  title: string;
-  cover_pic: string;
-  description: string;
-  chapter_count: number;
-  read_count: number;
-  collect_count: number;
-  theme: string[];
-}
-
-interface RawEpisode {
-  id: string;
-  series_id: string;
-  episode_index: number;
-  title: string;
-  duration: number;
-  video_url: string;
-  video_pic: string;
-  is_unlocked: boolean;
-}
-
-interface RawPage {
-  items?: unknown;
-  data?: unknown;
-  totalPages?: unknown;
-  hasMore?: unknown;
-}
-
 const runtimeCatalog: Reel[] = [...INITIAL_REELS_CATALOG];
 const runtimeDiscussions: Record<string, DiscussionComment[]> = {};
-
-function asText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function asCount(value: unknown): number {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
-}
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
-function parseSeries(value: unknown): RawSeries | null {
-  if (!value || typeof value !== 'object') return null;
-  const item = value as Record<string, unknown>;
-  const id = asText(item.id);
-  const title = asText(item.title);
-  const cover = asText(item.cover_pic);
-  if (!id || !title || !isHttpUrl(cover)) return null;
-
-  return {
-    id,
-    title,
-    cover_pic: cover,
-    description: asText(item.description),
-    chapter_count: asCount(item.chapter_count),
-    read_count: asCount(item.read_count),
-    collect_count: asCount(item.collect_count),
-    theme: Array.isArray(item.theme)
-      ? item.theme.map(asText).filter(Boolean).slice(0, 8)
-      : [],
-  };
-}
-
-function parseEpisode(value: unknown): RawEpisode | null {
-  if (!value || typeof value !== 'object') return null;
-  const item = value as Record<string, unknown>;
-  const id = asText(item.id);
-  const seriesId = asText(item.series_id);
-  const videoUrl = asText(item.video_url);
-  if (!id || !seriesId) return null;
-
-  return {
-    id,
-    series_id: seriesId,
-    episode_index: Math.max(1, asCount(item.episode_index)),
-    title: asText(item.title) || 'Episode',
-    duration: asCount(item.duration),
-    video_url: isHttpUrl(videoUrl) ? videoUrl : '',
-    video_pic: asText(item.video_pic),
-    is_unlocked: item.is_unlocked !== false,
-  };
-}
-
-async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  const abortFromParent = () => controller.abort();
-  signal?.addEventListener('abort', abortFromParent, { once: true });
-
-  try {
-    const response = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`Feed request failed (${response.status})`);
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeout);
-    signal?.removeEventListener('abort', abortFromParent);
-  }
-}
 
 function parseCursor(cursor: string | null | undefined, fallbackPage = 1) {
   const match = cursor?.match(/^(\d+):(\d+)$/);
@@ -138,52 +29,6 @@ function parseCursor(cursor: string | null | undefined, fallbackPage = 1) {
   return {
     page: Math.max(1, Number(match[1])),
     offset: Math.max(0, Number(match[2])),
-  };
-}
-
-function appendClientIdentifiers(
-  params: URLSearchParams,
-  sessionId?: string,
-  deviceId?: string
-) {
-  if (sessionId) params.set('session_id', sessionId);
-  if (deviceId) params.set('device_id', deviceId);
-}
-
-async function getPlayableEpisode(series: RawSeries, signal?: AbortSignal) {
-  const initialParams = new URLSearchParams({ id: series.id, refresh_stream: '1' });
-  const initial = (await fetchJson(
-    `${API_BASE}/api/series/detail.php?${initialParams.toString()}`,
-    signal
-  )) as Record<string, unknown>;
-  const episodes = Array.isArray(initial.episodes)
-    ? initial.episodes.map(parseEpisode).filter((episode): episode is RawEpisode => !!episode)
-    : [];
-  return episodes.find((episode) => episode.is_unlocked && episode.video_url) || null;
-}
-
-function toFeedItem(series: RawSeries, episode: RawEpisode): ReelItem {
-  const poster = isHttpUrl(episode.video_pic) ? episode.video_pic : series.cover_pic;
-  return {
-    id: `${series.id}:${episode.id}:${episode.episode_index}`,
-    videoUrl: episode.video_url,
-    posterUrl: poster,
-    aspectRatio: 9 / 16,
-    duration: episode.duration || undefined,
-    author: {
-      id: 'reelshort',
-      username: 'ReelShort',
-      isFollowed: false,
-    },
-    caption: `${series.title}\n${
-      series.description || `Episode ${episode.episode_index}`
-    }`,
-    metrics: {
-      likes: series.collect_count,
-      comments: 0,
-      shares: 0,
-      views: series.read_count,
-    },
   };
 }
 
@@ -211,80 +56,60 @@ function initialReelToFeedItem(reel: Reel): ReelItem {
   );
 }
 
-export async function fetchReelsFeed({
-  cursor,
-  page = 1,
-  limit = 4,
-  sessionId,
-  deviceId,
-  signal,
-}: ReelsFeedParams = {}): Promise<{ items: ReelItem[]; nextCursor: string | null }> {
+export async function fetchReelsFeed(
+  params: ReelsFeedParams = {}
+): Promise<{ items: ReelItem[]; nextCursor: string | null }> {
+  const { cursor, page = 1, limit = 4 } = params;
   const safeLimit = Math.min(10, Math.max(1, Math.floor(limit)));
   const position = parseCursor(cursor, page);
 
+  let combinedPool: ReelItem[] = [];
+
   try {
-    let payload: RawPage | null = null;
-    if (position.page === 1) {
-      const trendingParams = new URLSearchParams();
-      appendClientIdentifiers(trendingParams, sessionId, deviceId);
-      const suffix = trendingParams.size ? `?${trendingParams.toString()}` : '';
-      payload = (await fetchJson(
-        `${API_BASE}/api/series/trending.php${suffix}`,
-        signal
-      )) as RawPage;
-    } else {
-      const pageParams = new URLSearchParams({ page: String(position.page - 1) });
-      appendClientIdentifiers(pageParams, sessionId, deviceId);
-      payload = (await fetchJson(
-        `${API_BASE}/api/series/new-release.php?${pageParams.toString()}`,
-        signal
-      )) as RawPage;
-    }
+    const scrapedCatalog = await scrapeLiveCatalog();
+    if (Array.isArray(scrapedCatalog) && scrapedCatalog.length > 0) {
+      const scrapedFeedItems: ReelItem[] = scrapedCatalog.map((s) => ({
+        id: `reel-${s.id}-ep1`,
+        videoUrl: getStreamForDrama(s.id, 1),
+        posterUrl: s.cover_pic,
+        aspectRatio: 9 / 16,
+        duration: 90,
+        author: {
+          id: 'cinebai',
+          username: 'CineBai Reels',
+          isFollowed: false,
+        },
+        caption: `${s.title}\n${s.description || '100% Free streaming short drama series.'}`,
+        metrics: {
+          likes: s.collect_count,
+          comments: Math.floor(s.collect_count / 15),
+          shares: Math.floor(s.collect_count / 25),
+          views: s.read_count,
+        },
+      }));
 
-    const rawItems = Array.isArray(payload?.items)
-      ? payload.items
-      : Array.isArray(payload?.data)
-        ? payload.data
-        : [];
-    const series = rawItems.map(parseSeries).filter((item): item is RawSeries => !!item);
-    if (series.length > 0) {
-      const candidates = series.slice(position.offset, position.offset + safeLimit + 2);
-      const settled = await Promise.allSettled(
-        candidates.map(async (item) => {
-          const episode = await getPlayableEpisode(item, signal);
-          return episode ? toFeedItem(item, episode) : null;
-        })
-      );
-      const items = settled
-        .flatMap((result) => (result.status === 'fulfilled' && result.value ? [result.value] : []))
-        .slice(0, safeLimit);
-
-      if (items.length > 0) {
-        const nextOffset = position.offset + candidates.length;
-        const totalPages = Math.max(position.page, asCount(payload?.totalPages) + 1);
-        const hasMorePages =
-          position.page === 1 || payload?.hasMore === true || position.page < totalPages;
-        const nextCursor =
-          nextOffset < series.length
-            ? `${position.page}:${nextOffset}`
-            : hasMorePages
-              ? `${position.page + 1}:0`
-              : null;
-
-        return { items, nextCursor };
+      // Combine scraped items with editorial catalog items
+      const localItems = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
+      const map = new Map<string, ReelItem>();
+      for (const item of scrapedFeedItems) map.set(String(item.id), item);
+      for (const item of localItems) {
+        if (!map.has(String(item.id))) map.set(String(item.id), item);
       }
+      combinedPool = Array.from(map.values());
     }
   } catch {
-    // API unavailable or failed; seamlessly fall back to local rich catalog
+    // If scraper error, fallback to curated local catalog
   }
 
-  // Fallback to verified local catalog with infinite looping
-  const localItems = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
-  const total = localItems.length;
+  if (combinedPool.length === 0) {
+    combinedPool = INITIAL_REELS_CATALOG.map(initialReelToFeedItem);
+  }
+
+  const total = combinedPool.length;
   const startIndex = ((position.page - 1) * safeLimit + position.offset) % total;
   const items: ReelItem[] = [];
   for (let i = 0; i < safeLimit; i++) {
-    const item = localItems[(startIndex + i) % total];
+    const item = combinedPool[(startIndex + i) % total];
     const cycle = Math.floor(((position.page - 1) * safeLimit + position.offset + i) / total);
     items.push(cycle > 0 ? { ...item, id: `${item.id}-c${cycle}` } : item);
   }

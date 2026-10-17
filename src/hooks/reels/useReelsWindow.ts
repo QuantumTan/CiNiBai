@@ -58,17 +58,17 @@ export function useReelsWindow({
         clearTimeout(settleTimerRef.current);
       }
 
-      // Rapid scroll guard: wait ~120ms before updating stable index (§5.2)
+      // Rapid scroll guard: wait ~80ms before updating stable index
       settleTimerRef.current = setTimeout(() => {
         setStableIndex(newIndex);
         setActiveIndex(newIndex);
         onSettleIndex?.(newIndex);
 
-        // Near-end prefetch trigger (§5.3): activeIndex >= loadedCount - 3
+        // Near-end prefetch trigger: activeIndex >= loadedCount - 3
         if (newIndex >= totalItems - 3) {
           onNearEnd?.();
         }
-      }, 120);
+      }, 80);
     },
     [stableIndex, setActiveIndex, onSettleIndex, totalItems, onNearEnd]
   );
@@ -84,21 +84,28 @@ export function useReelsWindow({
 
     const observer = new IntersectionObserver(
       (entries) => {
+        let bestEntry: IntersectionObserverEntry | null = null;
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            const indexAttr = entry.target.getAttribute('data-reel-index');
-            if (indexAttr !== null) {
-              const idx = parseInt(indexAttr, 10);
-              if (!isNaN(idx)) {
-                handleIndexChange(idx);
-              }
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry;
+            }
+          }
+        }
+
+        if (bestEntry) {
+          const indexAttr = bestEntry.target.getAttribute('data-reel-index');
+          if (indexAttr !== null) {
+            const idx = parseInt(indexAttr, 10);
+            if (!isNaN(idx)) {
+              handleIndexChange(idx);
             }
           }
         }
       },
       {
         root: container,
-        threshold: 0.7,
+        threshold: 0.5,
       }
     );
 
@@ -113,13 +120,26 @@ export function useReelsWindow({
     };
   }, [containerRef, windowRange, handleIndexChange]);
 
-  // Track scrollend for snap confirmation
+  // Track scroll and scrollend for snap confirmation
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const handleScroll = () => {
       setScrollOffset(container.scrollTop);
+
+      // Debounced scroll snap detection for cross-browser stability
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (reelHeightPx > 0) {
+          const snapIndex = Math.round(container.scrollTop / reelHeightPx);
+          if (snapIndex >= 0 && snapIndex < totalItems && snapIndex !== stableIndex) {
+            handleIndexChange(snapIndex);
+          }
+        }
+      }, 80);
     };
 
     const handleScrollEnd = () => {
@@ -136,6 +156,7 @@ export function useReelsWindow({
     container.addEventListener('scrollend', handleScrollEnd, { passive: true });
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       container.removeEventListener('scroll', handleScroll);
       container.removeEventListener('scrollend', handleScrollEnd);
     };
