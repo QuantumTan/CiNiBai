@@ -9,8 +9,7 @@ import {
   Sparkles, 
   Compass, 
   Film, 
-  Tv, 
-  Flame
+  Tv,
 } from 'lucide-react';
 import { useWatchlistStore } from '../../store/watchlistStore';
 import { useAmbientCanvas } from '../../context/AmbientCanvasContext';
@@ -35,11 +34,17 @@ export function Navbar() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const navLinks = [
+  interface NavLinkItem {
+    to: string;
+    label: string;
+    icon: typeof Compass;
+    isNew?: boolean;
+  }
+
+  const navLinks: NavLinkItem[] = [
     { to: '/', label: 'Discover', icon: Compass },
     { to: '/movies', label: 'Movies', icon: Film },
     { to: '/tv', label: 'Series', icon: Tv },
-    { to: '/reels', label: 'Reels', icon: Flame, isNew: true },
     { to: '/anime', label: 'Anime', icon: Sparkles },
   ];
 
@@ -185,7 +190,7 @@ export function Navbar() {
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl apple-glass-thin text-xs text-slate-300 mb-4 hover:bg-white/15 transition-colors"
             >
               <Search size={15} className="text-slate-400" />
-              <span>Search movies, shows, reels...</span>
+              <span>Search movies, series, anime...</span>
             </button>
 
             {/* Primary Destinations */}

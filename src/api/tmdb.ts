@@ -81,7 +81,7 @@ export function getUpcomingMovies(page = 1) {
 
 export function getMovieDetails(movieId: number) {
   return tmdbFetch<TMDBMovieDetails>(`/movie/${movieId}`, {
-    append_to_response: 'credits,videos,similar,recommendations',
+    append_to_response: 'credits,videos,similar,recommendations,external_ids',
   });
 }
 
@@ -97,7 +97,7 @@ export function getTopRatedTVShows(page = 1) {
 
 export function getTVDetails(tvId: number) {
   return tmdbFetch<TMDBTVDetails>(`/tv/${tvId}`, {
-    append_to_response: 'credits,videos,similar,recommendations',
+    append_to_response: 'credits,videos,similar,recommendations,external_ids',
   });
 }
 

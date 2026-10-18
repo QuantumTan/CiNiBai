@@ -11,7 +11,6 @@ import { SearchPage } from './pages/SearchPage';
 import { WatchlistPage } from './pages/WatchlistPage';
 import { AnimePage } from './pages/AnimePage';
 import { NetworkPage } from './pages/NetworkPage';
-import { ReelsPage } from './pages/ReelsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +31,6 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/movies" element={<BrowsePage mediaType="movie" />} />
               <Route path="/tv" element={<BrowsePage mediaType="tv" />} />
-              <Route path="/reels" element={<ReelsPage />} />
               <Route path="/movie/:id" element={<DetailPage mediaType="movie" />} />
               <Route path="/tv/:id" element={<DetailPage mediaType="tv" />} />
               <Route path="/anime" element={<AnimePage />} />

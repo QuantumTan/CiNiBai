@@ -1,71 +1,88 @@
-// Video source provider registry
-// Uses embed-based providers that accept TMDB IDs
+// High-availability multi-mirror embed provider registry
 
 export interface EmbedSource {
   id: string;
   name: string;
   badge?: string;
-  getMovieUrl: (tmdbId: number) => string;
-  getTVUrl: (tmdbId: number, season: number, episode: number) => string;
+  host: string;
+  needsImdbId?: boolean;
+  getMovieUrl: (tmdbId: number, imdbId?: string | null, autoPlay?: boolean) => string;
+  getTVUrl: (tmdbId: number, season: number, episode: number, imdbId?: string | null, autoPlay?: boolean) => string;
 }
 
-// Embed providers ranked by speed, uptime, and minimal ads
+// Mirrors ranked by playback responsiveness, buffer rate, and minimal overlays
 const providers: EmbedSource[] = [
   {
-    id: 'vidlink',
-    name: 'VidLink (Ultra Fast)',
+    id: 'mirror-1',
+    name: 'Mirror 1 (VidLink)',
     badge: 'Recommended',
-    getMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}?autoplay=1`,
-    getTVUrl: (tmdbId, season, episode) => `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?autoplay=1`,
+    host: 'vidlink.pro',
+    getMovieUrl: (tmdbId, _imdbId, autoPlay = true) =>
+      `https://vidlink.pro/movie/${tmdbId}?autoplay=${autoPlay ? 'true' : 'false'}`,
+    getTVUrl: (tmdbId, season, episode, _imdbId, autoPlay = true) =>
+      `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?autoplay=${autoPlay ? 'true' : 'false'}&nextbutton=true`,
   },
   {
-    id: 'autoembed',
-    name: 'AutoEmbed (Multi-Source)',
+    id: 'mirror-2',
+    name: 'Mirror 2 (CineSrc)',
     badge: 'Fast',
+    host: 'cinesrc.st',
+    getMovieUrl: (tmdbId) => `https://cinesrc.st/embed/movie/${tmdbId}`,
+    getTVUrl: (tmdbId, season, episode) => `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
+  },
+  {
+    id: 'mirror-3',
+    name: 'Mirror 3 (VidSrc)',
+    host: 'vidsrc.to',
+    getMovieUrl: (tmdbId, _imdbId, autoPlay = true) =>
+      `https://vidsrc.to/embed/movie/${tmdbId}?autoplay=${autoPlay ? 1 : 0}`,
+    getTVUrl: (tmdbId, season, episode, _imdbId, autoPlay = true) =>
+      `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}?autoplay=${autoPlay ? 1 : 0}`,
+  },
+  {
+    id: 'mirror-4',
+    name: 'Mirror 4 (VidSrc CC)',
+    host: 'vidsrc.cc',
+    needsImdbId: true,
+    getMovieUrl: (tmdbId, imdbId, autoPlay = false) =>
+      `https://vidsrc.cc/v2/embed/movie/${imdbId || tmdbId}?poster=true&autoPlay=${autoPlay ? 'true' : 'false'}`,
+    getTVUrl: (tmdbId, season, episode, imdbId, autoPlay = false) =>
+      `https://vidsrc.cc/v2/embed/tv/${imdbId || tmdbId}/${season}/${episode}?poster=true&autoPlay=${autoPlay ? 'true' : 'false'}`,
+  },
+  {
+    id: 'mirror-5',
+    name: 'Mirror 5 (AutoEmbed)',
+    host: 'player.autoembed.cc',
     getMovieUrl: (tmdbId) => `https://player.autoembed.cc/embed/movie/${tmdbId}`,
     getTVUrl: (tmdbId, season, episode) => `https://player.autoembed.cc/embed/tv/${tmdbId}/${season}/${episode}`,
   },
-  {
-    id: 'vidsrc',
-    name: 'VidSrc Server',
-    getMovieUrl: (tmdbId) => `https://vidsrc.net/embed/movie?tmdb=${tmdbId}`,
-    getTVUrl: (tmdbId, season, episode) => `https://vidsrc.net/embed/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`,
-  },
-  {
-    id: 'superembed',
-    name: 'SuperEmbed Server',
-    getMovieUrl: (tmdbId) => `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`,
-    getTVUrl: (tmdbId, season, episode) => `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}`,
-  },
-  {
-    id: '2embed',
-    name: '2Embed Backup',
-    getMovieUrl: (tmdbId) => `https://www.2embed.cc/embed/${tmdbId}`,
-    getTVUrl: (tmdbId, season, episode) => `https://www.2embed.cc/embedtv/${tmdbId}&s=${season}&e=${episode}`,
-  },
 ];
 
-export function getProviders(): EmbedSource[] {
+export function getProviders(imdbId?: string | null): EmbedSource[] {
+  if (!imdbId) {
+    return providers.filter((p) => !p.needsImdbId);
+  }
   return providers;
 }
 
-export function getDefaultProvider(): EmbedSource {
-  return providers[0];
+export function getDefaultProvider(imdbId?: string | null): EmbedSource {
+  const activeProviders = getProviders(imdbId);
+  return activeProviders[0] || providers[0];
 }
 
-export function getProviderById(id: string): EmbedSource | undefined {
-  return providers.find((p) => p.id === id);
+export function getProviderById(id: string, imdbId?: string | null): EmbedSource | undefined {
+  const activeProviders = getProviders(imdbId);
+  return activeProviders.find((p) => p.id === id);
 }
 
 /**
- * Perform a fast client-side ping check to see if a provider's domain is accessible and responsive
+ * Fast client-side health ping to verify whether an embed domain is accessible
  */
-export async function testServerConnectivity(url: string, timeoutMs: number = 2500): Promise<boolean> {
+export async function testServerConnectivity(url: string, timeoutMs: number = 2200): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Use mode: 'no-cors' to ping the domain without CORS preflight failures
     await fetch(url, {
       method: 'HEAD',
       mode: 'no-cors',
@@ -75,7 +92,6 @@ export async function testServerConnectivity(url: string, timeoutMs: number = 25
     clearTimeout(timeoutId);
     return true;
   } catch {
-    // If fetch failed completely (DNS issue, timeout, blocked domain), return false
     return false;
   }
 }

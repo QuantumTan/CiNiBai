@@ -108,6 +108,16 @@ export interface TMDBMovieDetails {
   similar?: TMDBPaginatedResponse<TMDBMovie>;
   recommendations?: TMDBPaginatedResponse<TMDBMovie>;
   images?: TMDBImageResponse;
+  external_ids?: TMDBExternalIds;
+}
+
+export interface TMDBExternalIds {
+  imdb_id?: string | null;
+  tvdb_id?: number | null;
+  wikidata_id?: string | null;
+  facebook_id?: string | null;
+  instagram_id?: string | null;
+  twitter_id?: string | null;
 }
 
 // TV Show Details
@@ -148,6 +158,7 @@ export interface TMDBTVDetails {
   videos?: TMDBVideoResponse;
   similar?: TMDBPaginatedResponse<TMDBTVShow>;
   recommendations?: TMDBPaginatedResponse<TMDBTVShow>;
+  external_ids?: TMDBExternalIds;
 }
 
 // Season

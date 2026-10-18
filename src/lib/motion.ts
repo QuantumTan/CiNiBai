@@ -32,13 +32,6 @@ export const springScrubber = {
   mass: 0.5,
 } as const;
 
-export const springReels = {
-  type: 'spring',
-  stiffness: 400,
-  damping: 30,
-  mass: 0.8,
-} as const;
-
 export const fadeTransition = {
   duration: 0.12,
   ease: [0.16, 1, 0.3, 1],

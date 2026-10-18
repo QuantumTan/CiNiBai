@@ -27,14 +27,6 @@ export function WatchPage() {
   const season = Number(searchParams.get('s') || '1');
   const episode = Number(searchParams.get('e') || '1');
 
-  const providers = getProviders();
-  const [selectedProvider, setSelectedProvider] = useState<EmbedSource>(getDefaultProvider());
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isCheckingServers, setIsCheckingServers] = useState(true);
-  const [serverStatuses, setServerStatuses] = useState<Record<string, 'checking' | 'online' | 'failed'>>({});
-  const [activeIframeKey, setActiveIframeKey] = useState<number>(0);
-  const { extractAndSetAmbientColor } = useAmbientCanvas();
-
   const movieQuery = useMovieDetails(mediaType === 'movie' ? numericId : 0);
   const tvQuery = useTVDetails(mediaType === 'tv' ? numericId : 0);
   const { data: seasonData } = useTVSeasonDetails(
@@ -42,9 +34,28 @@ export function WatchPage() {
     season
   );
 
+  const imdbId: string | null = mediaType === 'movie'
+    ? (movieQuery.data?.imdb_id || movieQuery.data?.external_ids?.imdb_id || null)
+    : (tvQuery.data?.external_ids?.imdb_id || null);
+
+  const providers = getProviders(imdbId);
+  const [selectedProvider, setSelectedProvider] = useState<EmbedSource>(() => getDefaultProvider(imdbId));
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCheckingServers, setIsCheckingServers] = useState(true);
+  const [serverStatuses, setServerStatuses] = useState<Record<string, 'checking' | 'online' | 'failed'>>({});
+  const [activeIframeKey, setActiveIframeKey] = useState<number>(0);
+  const { extractAndSetAmbientColor } = useAmbientCanvas();
+
   const title = mediaType === 'movie' ? movieQuery.data?.title : tvQuery.data?.name;
   const backdrop = mediaType === 'movie' ? movieQuery.data?.backdrop_path : tvQuery.data?.backdrop_path;
   const poster = mediaType === 'movie' ? movieQuery.data?.poster_path : tvQuery.data?.poster_path;
+
+  // Sync selected provider if available providers list updates (e.g. IMDb ID unlocks Mirror 4)
+  useEffect(() => {
+    if (!providers.some((p) => p.id === selectedProvider.id)) {
+      setSelectedProvider(getDefaultProvider(imdbId));
+    }
+  }, [providers, selectedProvider.id, imdbId]);
 
   // Sample ambient color from media artwork
   useEffect(() => {
@@ -54,7 +65,7 @@ export function WatchPage() {
     }
   }, [backdrop, poster, extractAndSetAmbientColor]);
 
-  // Handle postMessage events for Auto Next (only supported on VidLink)
+  // Handle postMessage events for Auto Next (supported on Mirror 1)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Check origin
@@ -91,20 +102,21 @@ export function WatchPage() {
 
     async function runServerDiagnostics() {
       setIsCheckingServers(true);
+      const activeProviders = getProviders(imdbId);
       const initialStatuses: Record<string, 'checking' | 'online' | 'failed'> = {};
-      providers.forEach((p) => {
+      activeProviders.forEach((p) => {
         initialStatuses[p.id] = 'checking';
       });
       setServerStatuses(initialStatuses);
 
       let foundWorking = false;
 
-      for (const provider of providers) {
+      for (const provider of activeProviders) {
         const testUrl = mediaType === 'movie'
-          ? provider.getMovieUrl(numericId)
-          : provider.getTVUrl(numericId, season, episode);
+          ? provider.getMovieUrl(numericId, imdbId)
+          : provider.getTVUrl(numericId, season, episode, imdbId);
 
-        const isOnline = await testServerConnectivity(testUrl, 2000);
+        const isOnline = await testServerConnectivity(testUrl, 2200);
 
         if (!isMounted) return;
 
@@ -131,11 +143,11 @@ export function WatchPage() {
     return () => {
       isMounted = false;
     };
-  }, [numericId, mediaType, season, episode]);
+  }, [numericId, mediaType, season, episode, imdbId]);
 
   const embedUrl = mediaType === 'movie'
-    ? selectedProvider.getMovieUrl(numericId)
-    : selectedProvider.getTVUrl(numericId, season, episode);
+    ? selectedProvider.getMovieUrl(numericId, imdbId)
+    : selectedProvider.getTVUrl(numericId, season, episode, imdbId);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -244,8 +256,9 @@ export function WatchPage() {
               key={activeIframeKey}
               src={embedUrl}
               className="absolute inset-0 h-full w-full"
+              referrerPolicy="origin"
               allowFullScreen
-              allow="autoplay; encrypted-media; picture-in-picture"
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
               title={`${title} - ${selectedProvider.name}`}
               style={{ border: 'none' }}
             />

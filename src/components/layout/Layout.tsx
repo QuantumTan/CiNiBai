@@ -1,31 +1,25 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { FloatingNavDock } from './FloatingNavDock';
 import { Footer } from './Footer';
 import { RefractionFilter } from '../glass/RefractionFilter';
 
 export function Layout() {
-  const location = useLocation();
-  const isInfiniteReels =
-    location.pathname.startsWith('/reels') &&
-    (!location.search.includes('tab=') || location.search.includes('tab=infinite-feed'));
-  const isReelsSurface = location.pathname.startsWith('/reels');
-
   return (
     <div className="flex min-h-screen flex-col bg-[#08080a]">
       {/* Global SVG Refraction Displacement Filter */}
       <RefractionFilter />
 
       {/* Spatial Liquid Glass Top Navbar */}
-      {!isReelsSurface && <Navbar />}
+      <Navbar />
 
       {/* Main Content Area with bottom clearance for mobile navigation */}
-      <main className={isInfiniteReels ? 'flex-1' : 'flex-1 pb-20 md:pb-16'}>
+      <main className="flex-1 pb-20 md:pb-16">
         <Outlet />
       </main>
 
       {/* Footer */}
-      {!isInfiniteReels && <Footer />}
+      <Footer />
 
       {/* Adaptive iOS / visionOS Liquid Glass Nav Dock */}
       <FloatingNavDock />

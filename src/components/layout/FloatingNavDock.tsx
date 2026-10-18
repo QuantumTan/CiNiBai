@@ -7,8 +7,7 @@ import {
   Tv, 
   Sparkles, 
   Bookmark, 
-  Search,
-  Flame
+  Search
 } from 'lucide-react';
 import { useAmbientCanvas } from '../../context/AmbientCanvasContext';
 import { useWatchlistStore } from '../../store/watchlistStore';
@@ -54,7 +53,6 @@ export function FloatingNavDock() {
     { to: '/', label: 'Discover', icon: Compass },
     { to: '/movies', label: 'Movies', icon: Film },
     { to: '/tv', label: 'Series', icon: Tv },
-    { to: '/reels', label: 'Reels', icon: Flame, isHot: true },
     { to: '/anime', label: 'Anime', icon: Sparkles },
     { to: '/watchlist', label: 'Watchlist', icon: Bookmark, badge: watchlistItems.length },
   ];
@@ -64,7 +62,7 @@ export function FloatingNavDock() {
     { to: '/', label: 'Discover', icon: Compass },
     { to: '/movies', label: 'Movies', icon: Film },
     { to: '/tv', label: 'Series', icon: Tv },
-    { to: '/reels', label: 'Reels', icon: Flame, isHot: true },
+    { to: '/anime', label: 'Anime', icon: Sparkles },
     { to: '/watchlist', label: 'Watchlist', icon: Bookmark, badge: watchlistItems.length },
   ];
 
