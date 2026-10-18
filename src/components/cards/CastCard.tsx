@@ -20,7 +20,7 @@ export function CastCard({ member }: CastCardProps) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-bg-surface text-text-muted">
+          <div className="flex h-full w-full items-center justify-center bg-bg-surface text-text-secondary">
             <User size={28} aria-hidden="true" />
           </div>
         )}
@@ -29,7 +29,7 @@ export function CastCard({ member }: CastCardProps) {
         {member.name}
       </p>
       {member.character && (
-        <p className="truncate text-xs text-text-muted mt-0.5">
+        <p className="truncate text-xs text-text-secondary mt-0.5">
           {member.character}
         </p>
       )}

@@ -192,7 +192,7 @@ export function NetworkPage() {
       {/* Filter Controls Bar */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Sort By:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Sort By:</span>
           <div role="radiogroup" aria-label="Sort titles" className="flex flex-wrap gap-2">
             {[
               { id: 'latest_popular', label: 'Latest Hits' },
@@ -222,7 +222,7 @@ export function NetworkPage() {
         </div>
 
         {allItems.length > 0 && !isLoading && (
-          <span className="text-xs text-text-muted font-medium">
+          <span className="text-xs text-text-secondary font-medium">
             Showing {allItems.length} titles
           </span>
         )}

@@ -130,17 +130,17 @@ export function DetailPage({ mediaType }: DetailPageProps) {
         type={mediaType === 'movie' ? 'video.movie' : 'video.tv_show'}
       />
 
-      {/* Backdrop Scrim Header */}
-      <div className="relative h-[60vh] min-h-[380px] max-h-[640px] w-full bg-bg-surface overflow-hidden">
+      {/* Backdrop Scrim Header: aspect-video on mobile, widescreen on desktop, object-cover with scrim */}
+      <div className="relative w-full aspect-video md:aspect-[21/9] max-h-[560px] bg-bg-surface overflow-hidden">
         {backdropSrc ? (
           <img
             src={backdropSrc}
             alt=""
             aria-hidden="true"
-            className="h-full w-full object-cover object-top opacity-60"
+            className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
           />
         ) : (
-          <div className="h-full w-full bg-bg-surface" />
+          <div className="absolute inset-0 h-full w-full bg-bg-surface" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-bg-base/90 via-bg-base/30 to-transparent" />
@@ -159,19 +159,19 @@ export function DetailPage({ mediaType }: DetailPageProps) {
       </div>
 
       {/* Content Container */}
-      <div className="relative -mt-36 z-10 mx-auto max-w-7xl px-4 lg:px-8">
+      <div className="relative -mt-20 sm:-mt-28 md:-mt-36 z-10 mx-auto max-w-7xl px-4 lg:px-8">
         <div className="flex flex-col gap-6 md:flex-row md:gap-8">
           {/* Responsive Poster: visible on mobile thumbnail beside title & desktop 64-width card */}
           <div className="flex-shrink-0 flex items-start gap-4 md:block">
-            <div className="w-28 sm:w-36 md:w-64 aspect-[2/3] overflow-hidden rounded-lg border border-border-default shadow-xl bg-poster-fallback flex-shrink-0">
+            <div className="w-28 sm:w-36 md:w-64 aspect-[2/3] overflow-hidden rounded-lg border border-border-default shadow-xl bg-poster-fallback flex-shrink-0 relative">
               {posterSrc ? (
                 <img
                   src={posterSrc}
                   alt={title || ''}
-                  className="h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center p-2 text-center text-xs font-bold text-text-muted">
+                <div className="absolute inset-0 flex h-full w-full items-center justify-center p-2 text-center text-xs font-bold text-text-secondary">
                   {title || 'CineBai'}
                 </div>
               )}
@@ -222,7 +222,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                 >
                   <span aria-hidden="true">★</span>
                   <span>{formatRating(rating)}</span>
-                  <span className="text-text-muted font-normal">/ 10</span>
+                  <span className="text-text-secondary font-normal">/ 10</span>
                 </div>
               )}
 
@@ -286,7 +286,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
             {/* Director Credit */}
             {director && (
-              <p className="mt-4 text-xs md:text-sm text-text-muted">
+              <p className="mt-4 text-xs md:text-sm text-text-secondary">
                 Directed by <span className="text-text-primary font-medium">{director.name}</span>
               </p>
             )}
@@ -351,7 +351,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                 <h2 id="episodes-heading" className="text-lg md:text-xl font-semibold text-text-primary tracking-tight">
                   Episodes
                 </h2>
-                <p className="text-xs text-text-muted mt-0.5">Select a season and episode to start watching</p>
+                <p className="text-xs text-text-secondary mt-0.5">Select a season and episode to start watching</p>
               </div>
 
               {/* Season Selector Tabs */}
@@ -400,7 +400,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                       className="group relative flex flex-col sm:flex-row gap-4 sm:items-center rounded-lg p-3 sm:p-4 bg-bg-surface/60 hover:bg-bg-elevated border border-border-default hover:border-border-strong transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent min-h-[44px]"
                     >
                       {/* Episode Number (Desktop) */}
-                      <span className="hidden sm:block w-8 text-center text-lg font-bold text-text-muted group-hover:text-accent transition-colors flex-shrink-0">
+                      <span className="hidden sm:block w-8 text-center text-lg font-bold text-text-secondary group-hover:text-accent transition-colors flex-shrink-0">
                         {ep.episode_number}
                       </span>
 
@@ -414,7 +414,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                             loading="lazy"
                           />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center text-xs font-bold text-text-muted">
+                          <div className="h-full w-full flex items-center justify-center text-xs font-bold text-text-secondary">
                             EP {ep.episode_number}
                           </div>
                         )}
@@ -441,7 +441,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                             title={ep.name}
                             className="text-sm sm:text-base font-semibold text-text-primary group-hover:text-accent transition-colors truncate"
                           >
-                            <span className="sm:hidden mr-1.5 text-text-muted font-normal">
+                            <span className="sm:hidden mr-1.5 text-text-secondary font-normal">
                               {ep.episode_number}.
                             </span>
                             {ep.name}
@@ -465,7 +465,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                           </p>
                         ) : null}
 
-                        <div className="mt-2.5 flex items-center gap-3 text-xs text-text-muted">
+                        <div className="mt-2.5 flex items-center gap-3 text-xs text-text-secondary">
                           {ep.air_date && <span>Aired: {ep.air_date}</span>}
                           {ep.runtime && <span>• {ep.runtime} min</span>}
                         </div>
@@ -478,20 +478,21 @@ export function DetailPage({ mediaType }: DetailPageProps) {
           </section>
         )}
 
-        {/* Similar Titles Section */}
+        {/* Similar Titles Section: Canonical 6-column poster grid */}
         {similar?.results && similar.results.length > 0 && (
           <section aria-labelledby="similar-heading" className="mt-14 mb-8">
             <h2 id="similar-heading" className="mb-4 text-lg md:text-xl font-semibold text-text-primary tracking-tight">
               Similar Titles
             </h2>
-            <ScrollContainer role="region" aria-label="Similar Titles">
-              {similar.results.map((item) => (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {similar.results.slice(0, 18).map((item) => (
                 <MovieCard
                   key={item.id}
                   item={{ ...item, media_type: mediaType }}
+                  size="auto"
                 />
               ))}
-            </ScrollContainer>
+            </div>
           </section>
         )}
       </div>

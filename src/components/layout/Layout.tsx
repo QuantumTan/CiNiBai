@@ -25,13 +25,19 @@ export function Layout() {
       {/* Spatial Top Navbar */}
       <Navbar />
 
-      {/* Main Content Area with unified bottom clearance for floating navigation */}
-      <main id="main" tabIndex={-1} className="relative z-10 flex-1 pb-24 pb-[env(safe-area-inset-bottom)] focus:outline-none">
-        <Outlet />
-      </main>
+      {/* Main Content Area with unified bottom clearance for floating dock: 72px dock height + 24px gap + safe-area */}
+      <main
+        id="main"
+        tabIndex={-1}
+        className="relative z-10 flex flex-1 flex-col pb-[calc(72px+24px+env(safe-area-inset-bottom,0px))] focus:outline-none"
+      >
+        <div className="flex-1">
+          <Outlet />
+        </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer sits ABOVE the dock in normal flow, never under it */}
+        <Footer />
+      </main>
 
       {/* Mobile Bottom Dock & Desktop Spatial Floating Dock */}
       <FloatingDock />

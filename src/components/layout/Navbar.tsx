@@ -100,20 +100,21 @@ export function Navbar() {
 
         {/* Right Action Icons: Ambient Toggle + Watchlist */}
         <div className="flex items-center gap-2">
-          {/* Ambient Lighting Toggle */}
+          {/* Ambient Lighting Toggle with visible label and tooltip */}
           <button
             type="button"
             onClick={() => setAmbilightEnabled((prev) => !prev)}
-            className={`flex h-11 w-11 items-center justify-center rounded-full border border-border-default cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`flex h-11 items-center gap-2 px-3.5 rounded-full border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               ambilightEnabled
-                ? 'bg-accent/20 border-accent/50 text-accent'
-                : 'bg-black/60 text-text-secondary hover:text-text-primary hover:border-border-strong'
+                ? 'bg-accent/20 border-accent/50 text-accent font-semibold'
+                : 'bg-black/60 border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
             }`}
             aria-pressed={ambilightEnabled}
-            aria-label={ambilightEnabled ? 'Ambient lighting on' : 'Ambient lighting off'}
-            title={ambilightEnabled ? 'Ambient lighting on' : 'Ambient lighting off'}
+            aria-label={ambilightEnabled ? 'Ambient lighting on — click to turn off' : 'Ambient lighting off — click to turn on'}
+            title={ambilightEnabled ? 'Ambient lighting on (click to turn off)' : 'Ambient lighting off (click to turn on)'}
           >
             <Sparkles size={16} aria-hidden="true" />
+            <span className="text-xs font-semibold hidden sm:inline">Ambient</span>
           </button>
 
           {/* Desktop Search Shortcut */}
@@ -122,7 +123,8 @@ export function Navbar() {
             className={`hidden sm:flex md:hidden h-11 w-11 items-center justify-center rounded-full border border-border-default bg-black/60 text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               isActive('/search') ? 'border-accent text-accent' : ''
             }`}
-            aria-label="Search Catalog"
+            aria-label="Search catalog"
+            title="Search catalog"
           >
             <Search size={16} aria-hidden="true" />
           </Link>
@@ -131,6 +133,7 @@ export function Navbar() {
           <Link
             to="/watchlist"
             aria-current={isActive('/watchlist') ? 'page' : undefined}
+            title={`Watchlist (${watchlistCount} saved)`}
             className={`flex h-11 items-center gap-2 px-3.5 rounded-full border border-border-default transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               isActive('/watchlist')
                 ? 'bg-accent/20 border-accent/50 text-accent font-bold'

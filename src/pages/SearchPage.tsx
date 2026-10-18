@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, X, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { Search, X, AlertCircle, RefreshCw, Sparkles, TrendingUp } from 'lucide-react';
 import { SEO } from '../components/common/SEO';
-import { useInfiniteSearchMulti } from '../hooks/useTMDB';
+import { useInfiniteSearchMulti, useTrendingToday } from '../hooks/useTMDB';
 import { useDebounce } from '../hooks/useDebounce';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -36,13 +36,15 @@ export function SearchPage() {
     isFetchingNextPage,
   } = useInfiniteSearchMulti(debouncedQuery);
 
+  const { data: trendingToday, isLoading: trendingLoading } = useTrendingToday();
+
   // Flatten and filter out persons
   const rawResults = data?.pages?.flatMap((page) => page.results) || [];
   const results = rawResults.filter((item) => item.media_type !== 'person');
 
-  const leadPoster = results[0]?.poster_path;
+  const leadPoster = results[0]?.poster_path || trendingToday?.results?.[0]?.poster_path;
 
-  // Sample ambient color from first search hit
+  // Sample ambient color from first search hit or trending lead
   useEffect(() => {
     if (leadPoster) {
       setColorsFromImage(getPosterUrl(leadPoster, 'w500'));
@@ -64,12 +66,12 @@ export function SearchPage() {
         <h1 className="text-3xl md:text-5xl font-bold font-display tracking-tight text-text-primary mb-3">
           Search
         </h1>
-        <p className="text-sm md:text-base text-text-secondary">
+        <p className="text-base text-text-secondary">
           Find movies, television series, and anime across the entire library.
         </p>
       </div>
 
-      {/* Accessible Search Form */}
+      {/* Accessible Search Form: Single border on wrapper only, borderless inner input */}
       <div className="mx-auto max-w-2xl">
         <form
           role="search"
@@ -80,7 +82,7 @@ export function SearchPage() {
             Search movies, television series, and anime
           </label>
 
-          <Search className="text-text-muted shrink-0 mr-3" size={20} aria-hidden="true" />
+          <Search className="text-text-secondary shrink-0 mr-3" size={20} aria-hidden="true" />
 
           <input
             id="search"
@@ -90,15 +92,16 @@ export function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search movies, TV series, anime..."
-            className="w-full bg-transparent py-2.5 text-base text-text-primary placeholder:text-text-muted focus:outline-none"
+            className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 py-2.5 text-base text-text-primary placeholder:text-text-secondary/60"
           />
 
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="flex h-11 w-11 items-center justify-center shrink-0 text-text-muted hover:text-text-primary transition-colors cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex h-11 w-11 items-center justify-center shrink-0 text-text-secondary hover:text-text-primary transition-colors cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="Clear search"
+              title="Clear search"
             >
               <X size={18} aria-hidden="true" />
             </button>
@@ -108,24 +111,57 @@ export function SearchPage() {
 
       {/* Results Container */}
       <div className="mt-10">
-        {/* Idle Suggestions State */}
+        {/* Idle State: Popular Searches + Trending Now Grid to eliminate blank gap */}
         {!debouncedQuery && (
-          <div className="mx-auto max-w-xl text-center py-12">
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-text-muted font-semibold mb-4">
-              <Sparkles size={14} className="text-accent" aria-hidden="true" />
-              <span>Popular Searches</span>
+          <div className="py-6">
+            <div className="mx-auto max-w-xl text-center mb-12">
+              <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-text-secondary font-semibold mb-4">
+                <Sparkles size={14} className="text-accent" aria-hidden="true" />
+                <span>Popular Searches</span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setQuery(suggestion)}
+                    className="min-h-[44px] px-4 rounded-full bg-white/5 border border-border-default text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-border-strong cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setQuery(suggestion)}
-                  className="min-h-[44px] px-4 rounded-full bg-white/5 border border-border-default text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-border-strong cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {suggestion}
-                </button>
-              ))}
+
+            {/* Trending Now Rail of Poster Cards */}
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp size={18} className="text-accent" aria-hidden="true" />
+                <h2 className="text-lg md:text-xl font-bold font-display tracking-tight text-text-primary">
+                  Trending Now
+                </h2>
+              </div>
+
+              {trendingLoading ? (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i}>
+                      <Skeleton className="aspect-[2/3] w-full rounded-lg" />
+                      <Skeleton className="mt-2 h-4 w-3/4 rounded-md" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {trendingToday?.results?.slice(0, 12).map((item) => (
+                    <MovieCard
+                      key={`trending-${item.id}`}
+                      item={item as any}
+                      size="auto"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -176,7 +212,7 @@ export function SearchPage() {
             <h2 className="text-lg text-text-primary font-semibold">
               No results for "{debouncedQuery}"
             </h2>
-            <p className="mt-2 text-sm text-text-muted">
+            <p className="mt-2 text-base text-text-secondary">
               Check spelling or try searching with another keyword or title.
             </p>
             <Button
@@ -193,7 +229,7 @@ export function SearchPage() {
         {!isLoading && !isError && debouncedQuery && results.length > 0 && (
           <>
             <div className="mb-6 flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wider font-semibold text-text-muted">
+              <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary">
                 {results.length} matching {results.length === 1 ? 'title' : 'titles'}
               </p>
             </div>

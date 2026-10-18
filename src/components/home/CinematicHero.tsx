@@ -88,7 +88,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
 
   return (
     <section
-      className="relative h-[70vh] min-h-[420px] max-h-[720px] w-full overflow-hidden bg-bg-base"
+      className="relative h-[50vh] sm:h-[54vh] min-h-[380px] max-h-[480px] w-full overflow-hidden bg-bg-base"
       aria-label="Featured Showcase"
       onMouseEnter={() => setIsHoveredOrFocused(true)}
       onMouseLeave={() => setIsHoveredOrFocused(false)}
@@ -116,20 +116,20 @@ export function CinematicHero({ items }: CinematicHeroProps) {
             />
           )}
 
-          {/* Scrims */}
+          {/* Dual Left-to-Right + Bottom Scrim */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/50 to-transparent"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-r from-bg-base/95 via-bg-base/40 to-transparent"
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, rgba(8, 8, 10, 0.92), rgba(8, 8, 10, 0.55) 55%, transparent), linear-gradient(to top, rgba(8, 8, 10, 0.95), transparent 45%)',
+            }}
           />
         </motion.div>
       </AnimatePresence>
 
       {/* Editorial Title & Content Lockup */}
-      <div className="absolute inset-0 z-10 flex flex-col justify-end px-6 pb-12 sm:pb-16 md:px-12 lg:px-20">
+      <div className="absolute inset-0 z-10 flex flex-col justify-end px-6 pb-6 sm:pb-8 md:px-12 lg:px-20">
         <div className="max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
@@ -145,7 +145,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
                   {type === 'tv' ? 'Series' : 'Feature Film'}
                 </span>
                 {year !== '—' && (
-                  <span className="text-text-muted font-medium ml-1">
+                  <span className="text-text-secondary font-medium ml-1">
                     {year}
                   </span>
                 )}
@@ -161,17 +161,17 @@ export function CinematicHero({ items }: CinematicHeroProps) {
                 )}
               </div>
 
-              {/* Display Title: 40/44 -> md 56/60 -> lg 72/76, 700, font-display, line-clamp-2 */}
+              {/* Display Title: Uncollapsed spacing, max-w wrapping, Playfair Display */}
               <h2
-                className="mb-4 text-4xl sm:text-5xl md:text-6xl font-bold font-display text-text-primary tracking-tight line-clamp-2 drop-shadow-md"
+                className="mb-4 text-4xl sm:text-5xl md:text-6xl font-bold font-display text-text-primary tracking-normal break-words max-w-2xl lg:max-w-3xl line-clamp-2 drop-shadow-md"
                 title={title}
               >
                 {title}
               </h2>
 
-              {/* Synopsis line-clamp-3 */}
+              {/* Synopsis: text-secondary (#C7CAD1) at 16px/24px line-clamp-3 */}
               {overview && (
-                <p className="mb-6 max-w-2xl text-sm leading-relaxed text-text-secondary line-clamp-3 sm:text-base">
+                <p className="mb-6 max-w-2xl text-base leading-6 text-text-secondary line-clamp-3">
                   {overview}
                 </p>
               )}
@@ -217,40 +217,44 @@ export function CinematicHero({ items }: CinematicHeroProps) {
             </motion.div>
           </AnimatePresence>
 
-          {/* Slide Controls Row: 44px buttons, role="tab", aria-selected, plus visible Pause/Play */}
+          {/* Slide Controls Row: min 24px hit area each, active = gold 24px wide pill, inactive = white/40, Pause = 44x44 */}
           {heroItems.length > 1 && (
             <div
               className="mt-6 flex items-center gap-3"
               role="tablist"
               aria-label="Featured slides"
             >
-              {heroItems.map((item, idx) => (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentIndex(idx)}
-                  role="tab"
-                  id={`hero-tab-${idx}`}
-                  aria-controls={`hero-panel-${idx}`}
-                  aria-selected={idx === currentIndex}
-                  aria-label={`Slide ${idx + 1}: ${getMediaTitle(item)}`}
-                  className="flex h-11 min-w-[44px] items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md"
-                >
-                  <span
-                    className={`block h-1.5 rounded-full transition-[width,background-color] duration-300 ${
-                      idx === currentIndex
-                        ? 'w-10 bg-accent shadow-sm'
-                        : 'w-4 bg-white/25 hover:bg-white/40'
-                    }`}
-                  />
-                </button>
-              ))}
+              {heroItems.map((item, idx) => {
+                const isActive = idx === currentIndex;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentIndex(idx)}
+                    role="tab"
+                    id={`hero-tab-${idx}`}
+                    aria-controls={`hero-panel-${idx}`}
+                    aria-selected={isActive}
+                    aria-label={`Slide ${idx + 1}: ${getMediaTitle(item)}`}
+                    className="flex h-11 min-w-[24px] px-1 items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md"
+                  >
+                    <span
+                      className={`block h-2 rounded-full transition-all duration-300 ${
+                        isActive
+                          ? 'w-6 bg-accent shadow-sm'
+                          : 'w-2 bg-white/40 hover:bg-white/70'
+                      }`}
+                    />
+                  </button>
+                );
+              })}
 
-              {/* 44px Visible Pause/Play Control */}
+              {/* 44x44 Visible Pause/Play Control */}
               <button
                 type="button"
                 onClick={() => setIsPaused((prev) => !prev)}
                 className="ml-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default text-text-primary hover:bg-black/80 hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer transition-colors"
-                aria-label={isPaused ? 'Resume hero carousel autoplay' : 'Pause hero carousel autoplay'}
+                aria-label={isPaused ? 'Play hero autoplay' : 'Pause hero autoplay'}
+                title={isPaused ? 'Play hero autoplay' : 'Pause hero autoplay'}
               >
                 {isPaused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
               </button>

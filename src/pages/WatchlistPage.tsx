@@ -187,7 +187,7 @@ export function WatchlistPage() {
 
           {/* Sort Selector */}
           <div role="radiogroup" aria-label="Sort watchlist" className="flex items-center gap-1.5 text-xs">
-            <span className="text-text-muted font-medium mr-1">Sort:</span>
+            <span className="text-text-secondary font-medium mr-1">Sort:</span>
             {[
               { id: 'added', label: 'Recently Added' },
               { id: 'title', label: 'Title' },
@@ -215,7 +215,7 @@ export function WatchlistPage() {
       {/* Empty State */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-border-default bg-bg-surface text-center px-4 max-w-md mx-auto my-12 shadow-md">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-border-default mb-4 text-text-muted">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-border-default mb-4 text-text-secondary">
             <Bookmark size={30} aria-hidden="true" />
           </div>
           <h2 className="text-xl font-bold font-display text-text-primary">Your watchlist is empty</h2>

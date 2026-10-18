@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,15 +12,15 @@ import {
   X,
   FastForward,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { SEO } from '../components/common/SEO';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
-import { getProviders, getDefaultProvider, testServerConnectivity } from '../api/providers';
+import { getProviders, getDefaultProvider } from '../api/providers';
 import type { EmbedSource } from '../api/providers';
 import { useAmbientStore } from '../stores/ambient';
 import { getBackdropUrl, getPosterUrl } from '../api/tmdb';
 import { formatRating, getYear } from '../lib/utils';
-import { Button } from '../components/ui/Button';
 
 export function WatchPage() {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -63,9 +63,17 @@ export function WatchPage() {
       : tvQuery.data?.external_ids?.imdb_id || null;
 
   const providers = getProviders(imdbId);
-  const [selectedProvider, setSelectedProvider] = useState<EmbedSource>(() =>
-    getDefaultProvider(imdbId)
-  );
+
+  // Load preferred provider from localStorage if available
+  const [selectedProvider, setSelectedProvider] = useState<EmbedSource>(() => {
+    const savedId = localStorage.getItem('cinebai_preferred_provider');
+    if (savedId) {
+      const match = providers.find((p) => p.id === savedId);
+      if (match) return match;
+    }
+    return getDefaultProvider(imdbId);
+  });
+
   const activeProvider = providers.some((p) => p.id === selectedProvider.id)
     ? selectedProvider
     : getDefaultProvider(imdbId);
@@ -74,10 +82,7 @@ export function WatchPage() {
   const currentEpisodeRef = useRef<HTMLAnchorElement | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isCheckingServers, setIsCheckingServers] = useState(true);
-  const [serverStatuses, setServerStatuses] = useState<
-    Record<string, 'checking' | 'online' | 'failed'>
-  >({});
+  const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [activeIframeKey, setActiveIframeKey] = useState<number>(0);
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
 
@@ -96,7 +101,6 @@ export function WatchPage() {
       currentEpisodeRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [episode, activeSeason]);
-
 
   // Sample ambient color from media artwork
   useEffect(() => {
@@ -120,7 +124,7 @@ export function WatchPage() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // PostMessage auto-next
+  // PostMessage auto-next for VidLink
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== 'https://vidlink.pro') return;
@@ -150,47 +154,6 @@ export function WatchPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [autoNext, mediaType, season, episode, seasonData, tvQuery.data, numericId, navigate]);
 
-  const [diagnosticCounter, setDiagnosticCounter] = useState(0);
-
-  // Automated server check & auto-selection
-  useEffect(() => {
-    let isMounted = true;
-    const activeProviders = getProviders(imdbId);
-    let foundWorking = false;
-
-    (async () => {
-      for (const provider of activeProviders) {
-        const testUrl =
-          mediaType === 'movie'
-            ? provider.getMovieUrl(numericId, imdbId)
-            : provider.getTVUrl(numericId, season, episode, imdbId);
-
-        const isOnline = await testServerConnectivity(testUrl, 2200);
-
-        if (!isMounted) return;
-
-        setServerStatuses((prev) => ({
-          ...prev,
-          [provider.id]: isOnline ? 'online' : 'failed',
-        }));
-
-        if (isOnline && !foundWorking) {
-          foundWorking = true;
-          setSelectedProvider(provider);
-          setActiveIframeKey((k) => k + 1);
-        }
-      }
-
-      if (isMounted) {
-        setIsCheckingServers(false);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [numericId, mediaType, season, episode, imdbId, diagnosticCounter]);
-
   const embedUrl =
     mediaType === 'movie'
       ? activeProvider.getMovieUrl(numericId, imdbId)
@@ -209,20 +172,38 @@ export function WatchPage() {
     }
   };
 
-  const handleManualServerSelect = (provider: EmbedSource) => {
+  const handleManualServerSelect = useCallback((provider: EmbedSource) => {
     setSelectedProvider(provider);
+    localStorage.setItem('cinebai_preferred_provider', provider.id);
+    setIsIframeLoading(true);
     setActiveIframeKey((k) => k + 1);
-  };
+  }, []);
 
-  const switchToNextServer = () => {
-    const currentIndex = providers.findIndex((p) => p.id === selectedProvider.id);
+  const switchToNextServer = useCallback(() => {
+    const currentIndex = providers.findIndex((p) => p.id === activeProvider.id);
     const nextIndex = (currentIndex + 1) % providers.length;
     handleManualServerSelect(providers[nextIndex]);
-  };
+  }, [providers, activeProvider.id, handleManualServerSelect]);
 
-  const allServersFailed =
-    !isCheckingServers &&
-    providers.every((p) => serverStatuses[p.id] === 'failed');
+  const reloadCurrentServer = useCallback(() => {
+    setIsIframeLoading(true);
+    setActiveIframeKey((k) => k + 1);
+  }, []);
+
+  // Keyboard shortcut 's' / 'S' to cycle servers quickly
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        switchToNextServer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [switchToNextServer]);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-base text-text-primary">
@@ -260,7 +241,7 @@ export function WatchPage() {
           <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-white/5 border border-border-default px-3 py-1 text-xs text-text-secondary">
             <CheckCircle2 size={13} className="text-success" aria-hidden="true" />
             <span>
-              Server: <strong className="text-accent font-semibold">{selectedProvider.name}</strong>
+              Server: <strong className="text-accent font-semibold">{activeProvider.name}</strong>
             </span>
           </div>
 
@@ -293,7 +274,7 @@ export function WatchPage() {
                   Recommendation: Use an Adblocker
                 </strong>
                 <p className="text-text-secondary">
-                  Free third-party embeds may trigger pop-up advertisements. For a smooth experience,
+                  Free third-party streaming embeds may trigger pop-up advertisements. For the best experience,
                   we recommend using <strong className="text-text-primary">uBlock Origin</strong> or the <strong className="text-text-primary">Brave Browser</strong>.
                 </p>
               </div>
@@ -311,96 +292,95 @@ export function WatchPage() {
           {/* Scoped Video Player Container */}
           <div
             ref={playerContainerRef}
-            className="relative aspect-video w-full overflow-hidden rounded-lg bg-black border border-border-default shadow-xl"
+            className="relative aspect-video w-full overflow-hidden rounded-lg bg-black border border-border-default shadow-2xl"
           >
-            {/* Health check diagnostic overlay with Skip option */}
-            {isCheckingServers && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 p-6 text-center">
-                <Loader2 size={36} className="text-accent animate-spin mb-3" aria-hidden="true" />
-                <p className="text-base font-semibold text-text-primary">
-                  Testing server responsiveness...
+            {/* Seamless subtle loading overlay while iframe initializes */}
+            {isIframeLoading && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none transition-opacity duration-300">
+                <Loader2 size={38} className="text-accent animate-spin mb-3" aria-hidden="true" />
+                <p className="text-sm font-semibold text-text-primary">
+                  Connecting to {activeProvider.name}...
                 </p>
-                <p className="mt-1 text-xs text-text-muted max-w-sm">
-                  Checking available mirrors to route you to the fastest online host.
+                <p className="mt-1 text-xs text-text-secondary">
+                  Loading streaming mirror stream
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setIsCheckingServers(false)}
-                  className="mt-4 px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-xs font-semibold text-text-primary transition-colors cursor-pointer min-h-[44px]"
-                >
-                  Skip Check & Play Now
-                </button>
               </div>
             )}
 
-            {/* All servers down fallback error */}
-            {allServersFailed ? (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/20 text-error mb-4">
-                  <AlertCircle size={28} aria-hidden="true" />
-                </div>
-                <h2 className="text-lg font-bold text-text-primary">
-                  All streaming servers are currently unresponsive
-                </h2>
-                <p className="mt-2 text-xs sm:text-sm text-text-secondary max-w-md">
-                  External mirror providers may be undergoing maintenance. You can retry testing or
-                  manually pick a mirror below.
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      setIsCheckingServers(true);
-                      setDiagnosticCounter((c) => c + 1);
-                    }}
-                    className="inline-flex items-center gap-2"
-                  >
-                    <RefreshCw size={16} aria-hidden="true" />
-                    <span>Retry Servers</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setIsCheckingServers(false);
-                      handleManualServerSelect(providers[0]);
-                    }}
-                  >
-                    Force Play Mirror 1
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <iframe
-                key={activeIframeKey}
-                src={embedUrl}
-                className="absolute inset-0 h-full w-full border-0"
-                referrerPolicy="origin"
-                allowFullScreen
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                title={`${title} - ${selectedProvider.name}`}
-              />
-            )}
+            <iframe
+              key={activeIframeKey}
+              src={embedUrl}
+              className="absolute inset-0 h-full w-full border-0"
+              referrerPolicy="origin"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              title={`${title || 'Video Player'} - ${activeProvider.name}`}
+              onLoad={() => setIsIframeLoading(false)}
+            />
           </div>
 
-          {/* Servers Selector Control Panel */}
+          {/* Instant Server Switcher & Mirror Selector Toolbar */}
           <div className="mt-5 rounded-lg bg-bg-surface border border-border-default p-5 shadow-md">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-accent">
-                  Streaming Servers:
-                </span>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                    Streaming Mirrors:
+                  </span>
+                  <span className="text-xs text-text-secondary hidden sm:inline">
+                    (Select any server if video stalls)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={reloadCurrentServer}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold bg-white/5 border border-border-default text-text-secondary hover:text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    title="Reload current server"
+                  >
+                    <RefreshCw size={13} aria-hidden="true" />
+                    <span>Reload Mirror</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={switchToNextServer}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    title="Switch to next mirror (Shortcut: S)"
+                  >
+                    <FastForward size={14} aria-hidden="true" />
+                    <span>Next Mirror <kbd className="ml-1 text-[10px] font-mono opacity-70 bg-white/10 px-1 py-0.5 rounded">S</kbd></span>
+                  </button>
+
+                  {/* Auto Next Toggle (TV Only) */}
+                  {mediaType === 'tv' && (
+                    <button
+                      type="button"
+                      onClick={() => setAutoNext(!autoNext)}
+                      className={`min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        autoNext
+                          ? 'bg-success/20 border border-success/40 text-success font-bold'
+                          : 'bg-white/5 border border-border-default text-text-muted hover:text-text-secondary'
+                      }`}
+                      aria-pressed={autoNext}
+                      title={autoNext ? 'Auto Play Next Episode: ON' : 'Auto Play Next Episode: OFF'}
+                    >
+                      <FastForward size={13} aria-hidden="true" />
+                      <span>Auto Next: {autoNext ? 'ON' : 'OFF'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Server Buttons with Icon + Status Text */}
+              {/* Server Buttons with Badges */}
               <div
                 role="radiogroup"
                 aria-label="Available streaming mirrors"
-                className="flex flex-wrap items-center gap-2"
+                className="flex flex-wrap items-center gap-2 pt-1"
               >
                 {providers.map((provider) => {
-                  const isSelected = provider.id === selectedProvider.id;
-                  const status = serverStatuses[provider.id] || 'checking';
-                  const isFailed = status === 'failed';
+                  const isSelected = provider.id === activeProvider.id;
 
                   return (
                     <button
@@ -408,89 +388,49 @@ export function WatchPage() {
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      disabled={isFailed}
                       onClick={() => handleManualServerSelect(provider)}
-                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isSelected
-                          ? 'bg-accent text-on-accent shadow-sm'
-                          : isFailed
-                          ? 'bg-white/5 border border-border-subtle text-text-disabled opacity-50 cursor-not-allowed'
-                          : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
+                          ? 'bg-accent text-on-accent shadow-md scale-[1.02]'
+                          : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong hover:bg-white/10'
                       }`}
-                      aria-label={`${provider.name} - ${
-                        status === 'online'
-                          ? 'Online'
-                          : status === 'failed'
-                          ? 'Unavailable'
-                          : 'Checking'
-                      }`}
+                      aria-label={`${provider.name} - ${isSelected ? 'Active' : 'Switch to mirror'}`}
                     >
-                      {/* Status Icon */}
-                      {status === 'online' ? (
-                        <CheckCircle2
-                          size={14}
-                          className={isSelected ? 'text-on-accent' : 'text-success'}
-                          aria-hidden="true"
-                        />
-                      ) : status === 'failed' ? (
-                        <AlertCircle size={14} className="text-error" aria-hidden="true" />
+                      {isSelected ? (
+                        <CheckCircle2 size={14} className="text-on-accent shrink-0" aria-hidden="true" />
                       ) : (
-                        <Loader2
-                          size={14}
-                          className="animate-spin text-text-muted"
-                          aria-hidden="true"
-                        />
+                        <Play size={12} className="text-text-muted shrink-0" aria-hidden="true" />
                       )}
 
                       <span>{provider.name}</span>
 
-                      {/* Explicit Status Text for Non-Color Blind Access */}
-                      <span className="text-xs opacity-75 font-normal">
-                        ({status === 'online' ? 'Online' : status === 'failed' ? 'Down' : 'Testing'})
-                      </span>
+                      {provider.badge && (
+                        <span
+                          className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
+                            isSelected
+                              ? 'bg-black/25 text-on-accent'
+                              : 'bg-accent/15 text-accent border border-accent/20'
+                          }`}
+                        >
+                          {provider.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
-
-                {/* Quick Next Server button */}
-                <button
-                  type="button"
-                  onClick={switchToNextServer}
-                  className="min-h-[44px] flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold bg-white/5 border border-border-default text-text-secondary hover:text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  title="Switch to next available server"
-                >
-                  <FastForward size={14} aria-hidden="true" />
-                  <span>Next Server</span>
-                </button>
               </div>
 
-              {/* Auto Next Toggle (TV Only) */}
-              {mediaType === 'tv' && (
-                <button
-                  type="button"
-                  onClick={() => setAutoNext(!autoNext)}
-                  className={`min-h-[44px] flex items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                    autoNext
-                      ? 'bg-accent/20 border border-accent/40 text-accent font-bold'
-                      : 'bg-white/5 border border-border-default text-text-muted hover:text-text-secondary'
-                  }`}
-                  aria-pressed={autoNext}
-                  title={autoNext ? 'Auto Play Next Episode: ON' : 'Auto Play Next Episode: OFF'}
-                >
-                  <FastForward size={13} aria-hidden="true" />
-                  <span>Auto Next: {autoNext ? 'ON' : 'OFF'}</span>
-                </button>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-col gap-1 border-t border-border-subtle pt-3 sm:flex-row sm:items-center sm:justify-between text-xs text-text-muted">
-              <p>
-                <strong className="text-text-secondary">Tip:</strong> The player automatically
-                verifies server health and loads the fastest online source.
-              </p>
-              <p>
-                <strong className="text-accent">Auto Next</strong> is supported on VidLink.
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-text-secondary pt-2 border-t border-border-subtle gap-2">
+                <p className="flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-accent shrink-0" aria-hidden="true" />
+                  <span>
+                    All mirrors are connected. If a server buffers or stops, click any mirror above or press <strong className="text-text-primary">S</strong>.
+                  </span>
+                </p>
+                <p>
+                  Active host: <strong className="text-text-secondary">{activeProvider.host}</strong>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -508,7 +448,7 @@ export function WatchPage() {
               </div>
             )}
 
-            {/* Single Semantic H1 for WatchPage */}
+            {/* Semantic H1 for WatchPage */}
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-text-primary">
                 {title}
@@ -528,7 +468,7 @@ export function WatchPage() {
 
                 {year && <span>{year}</span>}
 
-                <span className="uppercase text-text-muted font-medium">
+                <span className="uppercase text-text-secondary font-medium">
                   {mediaType === 'movie' ? 'Movie' : 'TV Series'}
                 </span>
               </div>
@@ -553,7 +493,7 @@ export function WatchPage() {
               <div className="mb-4 border-b border-border-subtle pb-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <h2 className="text-sm font-bold text-text-primary tracking-tight">Episodes</h2>
-                  <span className="text-xs text-text-muted">
+                  <span className="text-xs text-text-secondary">
                     {seasonData?.episodes?.length || 0} episodes
                   </span>
                 </div>
@@ -620,7 +560,7 @@ export function WatchPage() {
                             loading="lazy"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-text-muted">
+                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-text-secondary">
                             EP {ep.episode_number}
                           </div>
                         )}
@@ -641,7 +581,7 @@ export function WatchPage() {
                         >
                           {ep.episode_number}. {ep.name}
                         </p>
-                        <p className="text-xs text-text-muted mt-0.5">
+                        <p className="text-xs text-text-secondary mt-0.5">
                           {ep.runtime ? `${ep.runtime} min` : 'Standard'}
                         </p>
                       </div>

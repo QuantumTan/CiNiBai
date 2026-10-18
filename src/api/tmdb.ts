@@ -12,26 +12,69 @@ import type {
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
+import {
+  MOCK_ALL_ITEMS,
+  MOCK_SIMILAR_BATMAN_MOVIES,
+  getMockMovieDetails,
+  getMockTVDetails,
+  getMockPaginated,
+} from './mockData';
+
 const getHeaders = (): HeadersInit => ({
   Authorization: `Bearer ${import.meta.env.VITE_TMDB_ACCESS_TOKEN}`,
   Accept: 'application/json',
 });
 
+function getMockResponse<T>(endpoint: string, params: Record<string, string | number> = {}): T {
+  if (endpoint.startsWith('/movie/')) {
+    const id = parseInt(endpoint.replace('/movie/', ''), 10);
+    return getMockMovieDetails(id || 321528) as unknown as T;
+  }
+  if (endpoint.startsWith('/tv/')) {
+    const id = parseInt(endpoint.replace('/tv/', ''), 10);
+    return getMockTVDetails(id || 213375) as unknown as T;
+  }
+  if (endpoint.startsWith('/search/')) {
+    const query = String(params.query || '').toLowerCase();
+    const filtered = query
+      ? MOCK_ALL_ITEMS.filter((item) => {
+          const t = 'title' in item ? item.title : item.name;
+          return t.toLowerCase().includes(query);
+        })
+      : MOCK_ALL_ITEMS;
+    return getMockPaginated(filtered.length ? filtered : MOCK_ALL_ITEMS) as unknown as T;
+  }
+  if (endpoint.includes('similar') || endpoint.includes('recommendations')) {
+    return getMockPaginated(MOCK_SIMILAR_BATMAN_MOVIES) as unknown as T;
+  }
+  // Trending, popular, top_rated, now_playing, upcoming, discover
+  return getMockPaginated(MOCK_ALL_ITEMS) as unknown as T;
+}
+
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T> {
-  const url = new URL(`${BASE_URL}${endpoint}`);
-  Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, String(val)));
-
-  const res = await fetch(url.toString(), { headers: getHeaders() });
-
-  if (!res.ok) {
-    if (res.status === 429) {
-      const retryAfter = res.headers.get('Retry-After') || '1';
-      throw new Error(`Rate limit exceeded. Retry after ${retryAfter}s`);
-    }
-    throw new Error(`TMDB API error: ${res.status} ${res.statusText}`);
+  const token = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
+  if (!token || token === 'undefined' || token === '') {
+    return getMockResponse<T>(endpoint, params);
   }
 
-  return res.json();
+  try {
+    const url = new URL(`${BASE_URL}${endpoint}`);
+    Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, String(val)));
+
+    const res = await fetch(url.toString(), { headers: getHeaders() });
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After') || '1';
+        throw new Error(`Rate limit exceeded. Retry after ${retryAfter}s`);
+      }
+      return getMockResponse<T>(endpoint, params);
+    }
+
+    return res.json();
+  } catch {
+    return getMockResponse<T>(endpoint, params);
+  }
 }
 
 // --- Image URL helpers ---

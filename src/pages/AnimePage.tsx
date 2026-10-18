@@ -77,7 +77,7 @@ export function AnimePage() {
             Discover top trending releases, seasonal simulcasts, and legendary classics.
           </p>
           {allItems.length > 0 && !isLoading && (
-            <span className="text-xs font-medium text-text-muted">
+            <span className="text-xs font-medium text-text-secondary">
               Showing {allItems.length} titles
             </span>
           )}
@@ -89,7 +89,7 @@ export function AnimePage() {
           aria-label="Sort anime by"
           className="mt-6 flex flex-wrap items-center gap-2"
         >
-          <span className="text-xs uppercase tracking-wider text-text-muted font-semibold mr-1">
+          <span className="text-xs uppercase tracking-wider text-text-secondary font-semibold mr-1">
             Sort:
           </span>
           {sortOptions.map((opt) => {

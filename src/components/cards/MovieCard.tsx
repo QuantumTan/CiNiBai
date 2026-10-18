@@ -77,14 +77,14 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
               src={posterUrl}
               alt={title}
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               onError={(e) => {
                 // Graceful fallback on broken image
                 (e.currentTarget as HTMLElement).style.display = 'none';
               }}
             />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center p-3 text-center bg-poster-fallback text-text-muted">
+            <div className="absolute inset-0 flex h-full w-full flex-col items-center justify-center p-3 text-center bg-poster-fallback text-text-secondary">
               <Film size={28} className="mb-2 text-text-disabled" aria-hidden="true" />
               <span className="text-xs font-semibold text-text-secondary line-clamp-2">{title}</span>
             </div>
@@ -114,7 +114,7 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
           <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
             {year !== '—' && <span>{year}</span>}
             {year !== '—' && <span className="h-1 w-1 rounded-full bg-border-strong" aria-hidden="true" />}
-            <span className="uppercase text-xs tracking-wider text-text-muted font-medium">
+            <span className="uppercase text-xs tracking-wider text-text-secondary font-medium">
               {type === 'tv' ? 'Series' : 'Movie'}
             </span>
           </div>

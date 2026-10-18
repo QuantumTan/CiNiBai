@@ -78,7 +78,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
             {title}
           </h2>
         </div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+        <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Global Top 10
         </span>
       </div>
@@ -166,7 +166,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                       >
                         {itemTitle}
                       </h3>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-text-muted">
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-text-secondary">
                         <span className="uppercase text-xs tracking-wider font-semibold text-text-secondary">
                           {mediaType === 'tv' ? 'Series' : 'Movie'}
                         </span>

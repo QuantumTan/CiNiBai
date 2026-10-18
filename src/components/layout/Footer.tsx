@@ -4,9 +4,9 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border-default bg-bg-surface/80 backdrop-blur-md py-8">
+    <footer className="border-t border-border-default bg-bg-surface/80 backdrop-blur-md py-8 mt-12">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="flex flex-col items-center justify-between gap-4 md:flex-row text-xs text-text-muted">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row text-xs text-text-secondary">
           <div className="flex items-center gap-2">
             <span className="font-bold tracking-tight text-text-primary text-base font-display">
               {SITE_NAME}
@@ -20,7 +20,7 @@ export function Footer() {
             <span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
           </div>
 
-          <div className="text-text-muted">
+          <div className="text-text-secondary">
             &copy; {currentYear} {SITE_NAME}. All rights reserved.
           </div>
         </div>

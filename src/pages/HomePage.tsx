@@ -47,62 +47,62 @@ export function HomePage() {
       <CinematicHero items={heroItems} />
 
       {/* Curated Streaming Studios */}
-      <section aria-labelledby="studios-heading" className="mx-auto max-w-7xl px-4 pt-10 lg:px-8">
-        <h2 id="studios-heading" className="mb-4 text-xs font-semibold uppercase tracking-wider text-text-muted">
+      <section aria-labelledby="studios-heading" className="mx-auto max-w-7xl px-4 pt-4 pb-6 lg:px-8">
+        <h2 id="studios-heading" className="mb-4 text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Premier Studios & Networks
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
           <Link
             to="/network/netflix"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-[#E50914]/50 transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Netflix network titles"
           >
-            <span className="text-lg font-black tracking-wider text-[#E50914]">
+            <span className="text-base sm:text-lg font-black tracking-widest text-text-primary group-hover:text-accent transition-colors">
               NETFLIX
             </span>
           </Link>
           <Link
             to="/network/hbo"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-[#9900FF]/50 transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="HBO Max network titles"
           >
-            <span className="text-lg font-black tracking-wider text-text-primary">
+            <span className="text-base sm:text-lg font-black tracking-wider text-text-primary group-hover:text-accent transition-colors">
               HBO <span className="text-xs font-bold text-accent">MAX</span>
             </span>
           </Link>
           <Link
             to="/network/prime"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-[#00A8E1]/50 transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Amazon Prime Video network titles"
           >
-            <span className="text-base font-bold text-[#00A8E1]">
+            <span className="text-sm sm:text-base font-bold text-text-primary group-hover:text-accent transition-colors">
               prime video
             </span>
           </Link>
           <Link
             to="/network/disney"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-[#3070F7]/50 transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Disney+ network titles"
           >
-            <span className="text-lg font-bold text-text-primary">
-              Disney<span className="text-[#38bdf8]">+</span>
+            <span className="text-base sm:text-lg font-bold text-text-primary group-hover:text-accent transition-colors">
+              Disney<span className="text-accent">+</span>
             </span>
           </Link>
           <Link
             to="/network/hulu"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-[#1CE783]/50 transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Hulu network titles"
           >
-            <span className="text-xl font-black tracking-tighter text-[#1CE783]">
+            <span className="text-lg sm:text-xl font-black tracking-tighter text-text-primary group-hover:text-accent transition-colors">
               hulu
             </span>
           </Link>
           <Link
             to="/network/apple"
-            className="flex h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Apple TV+ network titles"
           >
-            <span className="text-base font-semibold text-text-primary">
+            <span className="text-sm sm:text-base font-semibold text-text-primary group-hover:text-accent transition-colors">
                tv+
             </span>
           </Link>

@@ -104,7 +104,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
             HD streaming.
           </p>
           {allItems.length > 0 && !isLoading && (
-            <span className="text-xs font-medium text-text-muted">
+            <span className="text-xs font-medium text-text-secondary">
               Showing {allItems.length} titles
             </span>
           )}
@@ -149,7 +149,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
               <button
                 type="button"
                 onClick={() => setShowAllGenres((prev) => !prev)}
-                className="min-h-[44px] px-3.5 rounded-full text-xs font-semibold text-text-muted hover:text-text-primary border border-border-subtle hover:border-border-default flex items-center gap-1 transition-colors cursor-pointer"
+                className="min-h-[44px] px-3.5 rounded-full text-xs font-semibold text-text-secondary hover:text-text-primary border border-border-subtle hover:border-border-default flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span>{showAllGenres ? 'Collapse' : `+${genres.length - 8} more`}</span>
                 {showAllGenres ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -164,7 +164,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           aria-label="Sort catalog by"
           className="mt-4 flex flex-wrap items-center gap-2"
         >
-          <span className="text-xs uppercase tracking-wider text-text-muted font-semibold mr-1">
+          <span className="text-xs uppercase tracking-wider text-text-secondary font-semibold mr-1">
             Sort:
           </span>
           {sortOptions.map((opt) => {
