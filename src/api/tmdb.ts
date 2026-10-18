@@ -12,6 +12,24 @@ import type {
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
+// Named constants for anime curation and catalog queries
+export const ANIME_GENRE_ID = '16';
+export const JAPANESE_LANG = 'ja';
+
+// Default region for streaming providers
+// TODO: Connect to future dynamic user region picker
+export const WATCH_REGION = 'US';
+
+// TMDB Watch Provider IDs
+export const WATCH_PROVIDER_IDS = {
+  NETFLIX: '8',
+  PRIME_VIDEO: '9|119',
+  DISNEY_PLUS: '337',
+  HULU: '15',
+  APPLE_TV: '350',
+  HBO_MAX: '1899', // Merged HBO Max provider ID
+} as const;
+
 import {
   MOCK_ALL_ITEMS,
   MOCK_SIMILAR_BATMAN_MOVIES,

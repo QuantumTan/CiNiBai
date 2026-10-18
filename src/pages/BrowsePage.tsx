@@ -29,10 +29,12 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
   const params: DiscoverParams = {
     sort_by: sortBy === 'date.desc' ? dateSortDesc : sortBy === 'date.asc' ? dateSortAsc : sortBy,
     ...(selectedGenre ? { with_genres: String(selectedGenre) } : {}),
+    ...(sortBy === 'vote_average.desc' ? { 'vote_count.gte': mediaType === 'movie' ? 100 : 50 } : {}),
   };
 
-  const movieQuery = useDiscoverMovies(mediaType === 'movie' ? params : {});
-  const tvQuery = useDiscoverTVShows(mediaType === 'tv' ? params : {});
+  // Only call the query required for the active mediaType
+  const movieQuery = useDiscoverMovies(params, mediaType === 'movie');
+  const tvQuery = useDiscoverTVShows(params, mediaType === 'tv');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const query = mediaType === 'movie' ? movieQuery : (tvQuery as any);
@@ -249,7 +251,13 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
       {/* Results Grid */}
       {!isLoading && !isError && allItems.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div 
+            role="region"
+            aria-label={`${mediaType === 'movie' ? 'Movies' : 'TV Shows'} catalog results`}
+            aria-live="polite"
+            aria-busy={isLoading || query.isFetchingNextPage}
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+          >
             {allItems.map((item) => (
               <MovieCard
                 key={item.id}

@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
-import { Loader2 } from 'lucide-react';
 import { Layout } from './components/layout/Layout';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ScrollToTop } from './components/common/ScrollToTop';
@@ -23,6 +22,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 min default staleTime
+      gcTime: 30 * 60 * 1000, // 30 min cache garbage collection
     },
   },
 });
@@ -31,11 +32,18 @@ function PageLoader() {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-live="polite"
-      className="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center"
+      className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8 space-y-6"
     >
-      <Loader2 className="animate-spin text-accent mb-2" size={32} aria-hidden="true" />
-      <span className="sr-only">Loading page...</span>
+      <span className="sr-only">Loading…</span>
+      <div className="h-9 w-44 rounded-lg bg-white/5 animate-pulse motion-reduce:animate-none" />
+      <div className="aspect-[21/9] max-h-[380px] w-full rounded-2xl bg-white/5 animate-pulse motion-reduce:animate-none" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 pt-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-[2/3] w-full rounded-xl bg-white/5 animate-pulse motion-reduce:animate-none" />
+        ))}
+      </div>
     </div>
   );
 }

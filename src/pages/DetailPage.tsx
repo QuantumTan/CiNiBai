@@ -14,7 +14,7 @@ import { CastCard } from '../components/cards/CastCard';
 import { MovieCard } from '../components/cards/MovieCard';
 import { ScrollContainer } from '../components/ui/ScrollContainer';
 import { DetailPageSkeleton } from '../components/ui/Skeleton';
-import { useWatchlistStore } from '../store/watchlistStore';
+import { useWatchlistStore } from '../stores/watchlistStore';
 import { SEO } from '../components/common/SEO';
 import { useAmbientStore } from '../stores/ambient';
 
@@ -119,7 +119,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   const director = credits?.crew.find((c) => c.job === 'Director');
 
   const posterSrc = poster ? getPosterUrl(poster, 'w500') : null;
-  const backdropSrc = backdrop ? getBackdropUrl(backdrop, 'original') : null;
+  const backdropSrc = backdrop ? getBackdropUrl(backdrop, 'w1280') : null;
 
   return (
     <div className="relative">
@@ -137,6 +137,8 @@ export function DetailPage({ mediaType }: DetailPageProps) {
             src={backdropSrc}
             alt=""
             aria-hidden="true"
+            fetchPriority="high"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
           />
         ) : (
@@ -168,6 +170,8 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                 <img
                   src={posterSrc}
                   alt={title || ''}
+                  fetchPriority="high"
+                  decoding="async"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
@@ -412,6 +416,7 @@ export function DetailPage({ mediaType }: DetailPageProps) {
                             alt=""
                             className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-102"
                             loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-xs font-bold text-text-secondary">

@@ -4,7 +4,7 @@ import { Compass, Film, Tv, Sparkles, Bookmark, Search } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { MiniPlayerBadge } from './MiniPlayerBadge';
 import { spring, useSpatialMotion } from '../../lib/motion';
-import { useWatchlistStore } from '../../store/watchlistStore';
+import { useWatchlistStore } from '../../stores/watchlistStore';
 
 interface DockTab {
   to: string;

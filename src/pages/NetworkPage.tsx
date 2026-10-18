@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
 import { useAmbientStore } from '../stores/ambient';
+import { WATCH_PROVIDER_IDS, WATCH_REGION } from '../api/tmdb';
 import type { RGBColor } from '../lib/color';
 
 interface NetworkConfig {
@@ -16,14 +17,15 @@ interface NetworkConfig {
   rgb: RGBColor;
 }
 
+// Single source of truth for platform identity & branding colors
 const NETWORKS: Record<string, NetworkConfig> = {
-  netflix: { name: 'Netflix', id: '8', colorClass: 'text-[#E50914]', rgb: { r: 229, g: 9, b: 20 } },
-  prime: { name: 'Amazon Prime', id: '9|119', colorClass: 'text-[#00A8E1]', rgb: { r: 0, g: 168, b: 225 } },
-  disney: { name: 'Disney+', id: '337', colorClass: 'text-[#3070F7]', rgb: { r: 48, g: 112, b: 247 } },
-  apple: { name: 'Apple TV+', id: '350', colorClass: 'text-text-primary', rgb: { r: 200, g: 205, b: 215 } },
-  hulu: { name: 'Hulu', id: '15', colorClass: 'text-[#1CE783]', rgb: { r: 28, g: 231, b: 131 } },
-  hbo: { name: 'HBO Max', id: '1899|384', colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } },
-  max: { name: 'Max', id: '1899|384', colorClass: 'text-[#002BE7]', rgb: { r: 0, g: 43, b: 231 } },
+  netflix: { name: 'Netflix', id: WATCH_PROVIDER_IDS.NETFLIX, colorClass: 'text-[#E50914]', rgb: { r: 229, g: 9, b: 20 } },
+  prime: { name: 'Amazon Prime', id: WATCH_PROVIDER_IDS.PRIME_VIDEO, colorClass: 'text-[#00A8E1]', rgb: { r: 0, g: 168, b: 225 } },
+  disney: { name: 'Disney+', id: WATCH_PROVIDER_IDS.DISNEY_PLUS, colorClass: 'text-[#3070F7]', rgb: { r: 48, g: 112, b: 247 } },
+  apple: { name: 'Apple TV+', id: WATCH_PROVIDER_IDS.APPLE_TV, colorClass: 'text-text-primary', rgb: { r: 200, g: 205, b: 215 } },
+  hulu: { name: 'Hulu', id: WATCH_PROVIDER_IDS.HULU, colorClass: 'text-[#1CE783]', rgb: { r: 28, g: 231, b: 131 } },
+  hbo: { name: 'HBO Max', id: WATCH_PROVIDER_IDS.HBO_MAX, colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } },
+  max: { name: 'HBO Max', id: WATCH_PROVIDER_IDS.HBO_MAX, colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } }, // Alias pointing to merged HBO Max
 };
 
 // Date calculation for latest releases (last 18 months)
@@ -50,7 +52,7 @@ export function NetworkPage() {
   const getQueryParams = () => {
     const baseParams: Record<string, any> = {
       with_watch_providers: networkData?.id,
-      watch_region: 'US',
+      watch_region: WATCH_REGION,
     };
 
     if (sortOption === 'latest_popular') {
@@ -80,8 +82,9 @@ export function NetworkPage() {
 
   const queryParams = getQueryParams();
 
-  const tvQuery = useDiscoverTVShows(mediaType === 'tv' && networkData ? queryParams : { page: -1 });
-  const movieQuery = useDiscoverMovies(mediaType === 'movie' && networkData ? queryParams : { page: -1 });
+  // Call only the needed discover hook using the enabled flag (no sentinel { page: -1 })
+  const tvQuery = useDiscoverTVShows(queryParams, mediaType === 'tv' && !!networkData);
+  const movieQuery = useDiscoverMovies(queryParams, mediaType === 'movie' && !!networkData);
 
   const activeQuery = mediaType === 'tv' ? tvQuery : movieQuery;
   const { data, isLoading, isError, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
@@ -222,8 +225,10 @@ export function NetworkPage() {
         </div>
 
         {allItems.length > 0 && !isLoading && (
-          <span className="text-xs text-text-secondary font-medium">
-            Showing {allItems.length} titles
+          <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider" aria-live="polite">
+            {data?.pages?.[0]?.total_results
+              ? `${data.pages[0].total_results.toLocaleString()} titles available`
+              : `Showing ${allItems.length.toLocaleString()} loaded`}
           </span>
         )}
       </div>
@@ -281,7 +286,13 @@ export function NetworkPage() {
       ) : (
         !isError && (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div 
+              role="region"
+              aria-label={`${networkData.name} catalog results`}
+              aria-live="polite"
+              aria-busy={isLoading || isFetchingNextPage}
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+            >
               {allItems.map((item) => (
                 <MovieCard
                   key={item.id}

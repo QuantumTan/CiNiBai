@@ -4,12 +4,12 @@ import { Bookmark, ArrowLeft, Trash2, AlertTriangle, X } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { MovieCard } from '../components/cards/MovieCard';
-import { useWatchlistStore } from '../store/watchlistStore';
+import { useWatchlistStore } from '../stores/watchlistStore';
 import { useAmbientStore } from '../stores/ambient';
 import { getPosterUrl } from '../api/tmdb';
 
 export function WatchlistPage() {
-  const { items, clearWatchlist } = useWatchlistStore();
+  const { items, clearWatchlist, lastAnnouncement } = useWatchlistStore();
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
 
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
@@ -43,6 +43,11 @@ export function WatchlistPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
+      {/* Screen reader live region for watchlist actions */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {lastAnnouncement}
+      </div>
+
       <SEO
         title="My Watchlist - CineBai"
         description="View and manage your saved movies and TV shows to watch later on CineBai."

@@ -8,7 +8,7 @@ import {
   Film, 
   Tv,
 } from 'lucide-react';
-import { useWatchlistStore } from '../../store/watchlistStore';
+import { useWatchlistStore } from '../../stores/watchlistStore';
 import { useAmbientStore } from '../../stores/ambient';
 
 interface NavLinkItem {

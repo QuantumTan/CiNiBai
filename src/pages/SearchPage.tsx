@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Search, X, AlertCircle, RefreshCw, Sparkles, TrendingUp } from 'lucide-react';
 import { SEO } from '../components/common/SEO';
 import { useInfiniteSearchMulti, useTrendingToday } from '../hooks/useTMDB';
-import { useDebounce } from '../hooks/useDebounce';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
@@ -22,7 +21,7 @@ const SUGGESTIONS = [
 
 export function SearchPage() {
   const [query, setQuery] = useState('');
-  const debouncedQuery = useDebounce(query, 300);
+  const trimmedQuery = query.trim();
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
 
   const {
@@ -34,11 +33,11 @@ export function SearchPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfiniteSearchMulti(debouncedQuery);
+  } = useInfiniteSearchMulti(trimmedQuery);
 
   const { data: trendingToday, isLoading: trendingLoading } = useTrendingToday();
 
-  // Flatten and filter out persons
+  // Flatten and exclude person results from both count and grid
   const rawResults = data?.pages?.flatMap((page) => page.results) || [];
   const results = rawResults.filter((item) => item.media_type !== 'person');
 
@@ -55,8 +54,8 @@ export function SearchPage() {
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
       <SEO
         title={
-          debouncedQuery
-            ? `Search: "${debouncedQuery}" - CineBai`
+          trimmedQuery
+            ? `Search: "${trimmedQuery}" - CineBai`
             : 'Search Movies, Series & Anime - CineBai'
         }
         description="Search for movies, TV series, and anime to watch online in HD on CineBai."
@@ -112,7 +111,7 @@ export function SearchPage() {
       {/* Results Container */}
       <div className="mt-10">
         {/* Idle State: Popular Searches + Trending Now Grid to eliminate blank gap */}
-        {!debouncedQuery && (
+        {!trimmedQuery && (
           <div className="py-6">
             <div className="mx-auto max-w-xl text-center mb-12">
               <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-text-secondary font-semibold mb-4">
@@ -167,12 +166,12 @@ export function SearchPage() {
         )}
 
         {/* Loading Skeleton */}
-        {isLoading && debouncedQuery && (
+        {isLoading && trimmedQuery && (
           <div
             aria-busy="true"
             className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
           >
-            <span className="sr-only">Searching for "{debouncedQuery}"...</span>
+            <span className="sr-only">Searching for "{trimmedQuery}"...</span>
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i}>
                 <Skeleton className="aspect-[2/3] w-full rounded-lg" />
@@ -183,7 +182,7 @@ export function SearchPage() {
         )}
 
         {/* Error State */}
-        {isError && debouncedQuery && (
+        {isError && trimmedQuery && (
           <div
             role="alert"
             className="my-12 rounded-lg border border-error/30 bg-bg-surface p-8 text-center shadow-lg max-w-lg mx-auto"
@@ -207,10 +206,10 @@ export function SearchPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !isError && debouncedQuery && results.length === 0 && (
+        {!isLoading && !isError && trimmedQuery && results.length === 0 && (
           <div className="text-center py-16 max-w-md mx-auto">
             <h2 className="text-lg text-text-primary font-semibold">
-              No results for "{debouncedQuery}"
+              No results for "{trimmedQuery}"
             </h2>
             <p className="mt-2 text-base text-text-secondary">
               Check spelling or try searching with another keyword or title.
@@ -226,15 +225,21 @@ export function SearchPage() {
         )}
 
         {/* Populated Results Grid */}
-        {!isLoading && !isError && debouncedQuery && results.length > 0 && (
+        {!isLoading && !isError && trimmedQuery && results.length > 0 && (
           <>
             <div className="mb-6 flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary">
-                {results.length} matching {results.length === 1 ? 'title' : 'titles'}
+              <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary" aria-live="polite">
+                {results.length.toLocaleString()} {results.length === 1 ? 'result' : 'results'}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div 
+              role="region"
+              aria-label="Search results"
+              aria-live="polite"
+              aria-busy={isLoading || isFetchingNextPage}
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+            >
               {results.map((item) => (
                 <MovieCard
                   key={`${item.media_type || 'title'}-${item.id}`}

@@ -14,9 +14,14 @@ import {
   getTVGenres,
   discoverMovies,
   discoverTVShows,
+  ANIME_GENRE_ID,
+  JAPANESE_LANG,
+  WATCH_REGION,
+  WATCH_PROVIDER_IDS,
 } from '../api/tmdb';
 import type { DiscoverParams } from '../api/tmdb';
 import { STALE_TIMES } from '../lib/constants';
+import { useDebounce } from './useDebounce';
 
 // --- Trending ---
 export function useTrending(mediaType: 'all' | 'movie' | 'tv' = 'all', timeWindow: 'day' | 'week' = 'week') {
@@ -68,7 +73,7 @@ const recentDateStr = oneYearAgo.toISOString().split('T')[0];
 export function useNetflixOriginals() {
   return useQuery({
     queryKey: ['tv', 'netflix', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '8', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.NETFLIX, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -76,7 +81,7 @@ export function useNetflixOriginals() {
 export function usePrimeOriginals() {
   return useQuery({
     queryKey: ['tv', 'prime', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '9|119', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.PRIME_VIDEO, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -84,7 +89,7 @@ export function usePrimeOriginals() {
 export function useDisneyOriginals() {
   return useQuery({
     queryKey: ['tv', 'disney', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '337', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.DISNEY_PLUS, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -92,7 +97,7 @@ export function useDisneyOriginals() {
 export function useHuluOriginals() {
   return useQuery({
     queryKey: ['tv', 'hulu', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '15', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.HULU, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -100,7 +105,7 @@ export function useHuluOriginals() {
 export function useAppleTVOriginals() {
   return useQuery({
     queryKey: ['tv', 'apple', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '350', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.APPLE_TV, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -108,7 +113,7 @@ export function useAppleTVOriginals() {
 export function useHBOMaxOriginals() {
   return useQuery({
     queryKey: ['tv', 'hbo', 'recent'],
-    queryFn: () => discoverTVShows({ with_watch_providers: '1899|384', watch_region: 'US', sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
+    queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.HBO_MAX, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
   });
 }
@@ -117,8 +122,8 @@ export function useAnime() {
   return useQuery({
     queryKey: ['tv', 'anime'],
     queryFn: () => discoverTVShows({ 
-      with_genres: '16', 
-      with_original_language: 'ja',
+      with_genres: ANIME_GENRE_ID, 
+      with_original_language: JAPANESE_LANG,
       sort_by: 'popularity.desc' 
     }),
     staleTime: STALE_TIMES.popular,
@@ -170,19 +175,25 @@ export function useTVSeasonDetails(tvId: number, seasonNumber: number) {
 }
 
 // --- Search ---
-export function useSearchMulti(query: string) {
+export function useSearchMulti(query: string, delay: number = 300) {
+  const trimmed = query.trim();
+  const debounced = useDebounce(trimmed, delay);
+
   return useQuery({
-    queryKey: ['search', query],
-    queryFn: () => searchMulti(query),
+    queryKey: ['search', debounced],
+    queryFn: () => searchMulti(debounced),
     staleTime: STALE_TIMES.search,
-    enabled: query.length >= 2,
+    enabled: debounced.length >= 2,
   });
 }
 
-export function useInfiniteSearchMulti(query: string) {
+export function useInfiniteSearchMulti(query: string, delay: number = 300) {
+  const trimmed = query.trim();
+  const debounced = useDebounce(trimmed, delay);
+
   return useInfiniteQuery({
-    queryKey: ['search', 'infinite', query],
-    queryFn: ({ pageParam = 1 }) => searchMulti(query, pageParam),
+    queryKey: ['search', 'infinite', debounced],
+    queryFn: ({ pageParam = 1 }) => searchMulti(debounced, pageParam),
     getNextPageParam: (lastPage) => {
       if (lastPage.page < Math.min(lastPage.total_pages, 500)) {
         return lastPage.page + 1;
@@ -191,7 +202,7 @@ export function useInfiniteSearchMulti(query: string) {
     },
     initialPageParam: 1,
     staleTime: STALE_TIMES.search,
-    enabled: query.trim().length >= 2,
+    enabled: debounced.length >= 2,
   });
 }
 
@@ -213,7 +224,7 @@ export function useTVGenres() {
 }
 
 // --- Discover (infinite scroll for browse pages) ---
-export function useDiscoverMovies(params: DiscoverParams = {}) {
+export function useDiscoverMovies(params: DiscoverParams = {}, enabled: boolean = true) {
   return useInfiniteQuery({
     queryKey: ['discover', 'movies', params],
     queryFn: ({ pageParam = 1 }) => discoverMovies({ ...params, page: pageParam }),
@@ -225,10 +236,11 @@ export function useDiscoverMovies(params: DiscoverParams = {}) {
     },
     initialPageParam: 1,
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useDiscoverTVShows(params: DiscoverParams = {}) {
+export function useDiscoverTVShows(params: DiscoverParams = {}, enabled: boolean = true) {
   return useInfiniteQuery({
     queryKey: ['discover', 'tv', params],
     queryFn: ({ pageParam = 1 }) => discoverTVShows({ ...params, page: pageParam }),
@@ -240,5 +252,6 @@ export function useDiscoverTVShows(params: DiscoverParams = {}) {
     },
     initialPageParam: 1,
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }

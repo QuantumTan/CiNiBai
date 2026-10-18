@@ -142,6 +142,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                           alt={itemTitle}
                           className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover/top10:scale-105"
                           loading="lazy"
+                          decoding="async"
                         />
 
                         {/* Rating Pill */}

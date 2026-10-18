@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Star, Plus, Check, Film } from 'lucide-react';
 import { getPosterUrl } from '../../api/tmdb';
 import { getMediaTitle, getMediaDate, getYear, getMediaType, formatRating } from '../../lib/utils';
-import { useWatchlistStore } from '../../store/watchlistStore';
+import { useWatchlistStore } from '../../stores/watchlistStore';
 
 export interface MovieCardProps {
   item: {
@@ -77,6 +77,7 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
               src={posterUrl}
               alt={title}
               loading="lazy"
+              decoding="async"
               className="absolute inset-0 h-full w-full object-cover"
               onError={(e) => {
                 // Graceful fallback on broken image

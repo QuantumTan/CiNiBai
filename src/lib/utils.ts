@@ -1,3 +1,7 @@
+import clsx, { type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+export { getPosterUrl, getBackdropUrl } from '../api/tmdb';
+
 // Utility functions for CineBai
 
 /**
@@ -5,16 +9,17 @@
  * e.g. "2024-03-15" -> "Mar 15, 2024"
  */
 export function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return 'Unknown';
+  if (!dateStr) return '—';
   try {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '—';
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
   } catch {
-    return 'Unknown';
+    return '—';
   }
 }
 
@@ -63,7 +68,7 @@ export function truncate(str: string, maxLength: number): string {
  * Get the title from a media item (handles both movie and TV)
  */
 export function getMediaTitle(item: { title?: string; name?: string }): string {
-  return item.title || item.name || 'Untitled';
+  return item.title || item.name || '—';
 }
 
 /**
@@ -74,18 +79,18 @@ export function getMediaDate(item: { release_date?: string; first_air_date?: str
 }
 
 /**
- * Determine if a media item is a movie or TV show using explicit media_type
+ * Determine if a media item is a movie or TV show using explicit media_type.
+ * Person and unspecified items default to 'movie', never 'tv'.
  */
-export function getMediaType(item: { media_type?: string; title?: string; name?: string }): 'movie' | 'tv' {
+export function getMediaType(item: { media_type?: string }): 'movie' | 'tv' {
   if (item.media_type === 'tv') return 'tv';
   if (item.media_type === 'movie') return 'movie';
-  if ('name' in item && item.name && !('title' in item && item.title)) return 'tv';
   return 'movie';
 }
 
 /**
- * Build a class string from conditional classes
+ * Combines clsx for conditional class resolution with tailwind-merge to deterministically deduplicate conflicting Tailwind CSS utility classes.
  */
-export function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(' ');
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }

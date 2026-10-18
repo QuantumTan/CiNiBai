@@ -34,7 +34,7 @@ export function AmbientCanvas() {
             : undefined
         }
         transition={isReduced ? undefined : springSoft}
-        className="absolute -top-[10%] left-1/2 h-[45vh] md:h-[750px] w-[95vw] md:w-[1400px] -translate-x-1/2 rounded-full blur-[100px] md:blur-[140px] will-change-transform"
+        className="absolute -top-[10%] left-1/2 h-[35vh] max-h-[400px] md:max-h-none md:h-[750px] w-[90vw] max-w-[600px] md:max-w-none md:w-[1400px] -translate-x-1/2 rounded-full blur-[60px] md:blur-[140px] will-change-transform"
       />
 
       {/* Secondary Chromatic Blob (Right Perimeter Fill) */}
@@ -54,7 +54,7 @@ export function AmbientCanvas() {
             : undefined
         }
         transition={isReduced ? undefined : springSoft}
-        className="absolute top-[35%] right-[-10%] h-[35vh] md:h-[600px] w-[70vw] md:w-[700px] rounded-full blur-[110px] md:blur-[160px] will-change-transform"
+        className="absolute top-[35%] right-[-10%] h-[30vh] max-h-[350px] md:max-h-none md:h-[600px] w-[65vw] max-w-[450px] md:max-w-none md:w-[700px] rounded-full blur-[70px] md:blur-[160px] will-change-transform"
       />
 
       {/* Tertiary Depth Blob (Lower Left Floor Resonance) */}
@@ -74,7 +74,7 @@ export function AmbientCanvas() {
             : undefined
         }
         transition={isReduced ? undefined : springSoft}
-        className="absolute top-[60%] left-[-10%] h-[30vh] md:h-[550px] w-[65vw] md:w-[650px] rounded-full blur-[100px] md:blur-[150px] will-change-transform"
+        className="absolute top-[60%] left-[-10%] h-[25vh] max-h-[300px] md:max-h-none md:h-[550px] w-[60vw] max-w-[400px] md:max-w-none md:w-[650px] rounded-full blur-[60px] md:blur-[150px] will-change-transform"
       />
 
       {/* Obsidian Base Ground Pinning Scrim */}

@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows } from '../hooks/useTMDB';
 import { useAmbientStore } from '../stores/ambient';
-import { getPosterUrl } from '../api/tmdb';
+import { getPosterUrl, ANIME_GENRE_ID, JAPANESE_LANG } from '../api/tmdb';
 
 export function AnimePage() {
   const [sortBy, setSortBy] = useState('popularity.desc');
@@ -22,9 +22,10 @@ export function AnimePage() {
     hasNextPage,
     isFetchingNextPage,
   } = useDiscoverTVShows({
-    with_genres: '16',
-    with_original_language: 'ja',
+    with_genres: ANIME_GENRE_ID,
+    with_original_language: JAPANESE_LANG,
     sort_by: sortBy,
+    ...(sortBy === 'vote_average.desc' ? { 'vote_count.gte': 50 } : {}),
   });
 
   const allItems = (data?.pages?.flatMap((page: any) => page.results) || []) as Array<{
@@ -77,8 +78,8 @@ export function AnimePage() {
             Discover top trending releases, seasonal simulcasts, and legendary classics.
           </p>
           {allItems.length > 0 && !isLoading && (
-            <span className="text-xs font-medium text-text-secondary">
-              Showing {allItems.length} titles
+            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary" aria-live="polite">
+              {allItems.length.toLocaleString()} {allItems.length === 1 ? 'title' : 'titles'}
             </span>
           )}
         </div>
@@ -171,7 +172,13 @@ export function AnimePage() {
       {/* Results Grid */}
       {!isLoading && !isError && allItems.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div 
+            role="region"
+            aria-label="Anime catalog results"
+            aria-live="polite"
+            aria-busy={isLoading || isFetchingNextPage}
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+          >
             {allItems.map((item) => (
               <MovieCard
                 key={item.id}

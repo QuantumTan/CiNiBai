@@ -24,6 +24,8 @@ export function MiniPlayerBadge() {
             src={currentTrack.poster}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (

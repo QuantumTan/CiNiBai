@@ -189,6 +189,8 @@ export function LiquidVideoPlayer({
           src={poster}
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-40 blur-sm pointer-events-none"
         />
       )}
@@ -222,7 +224,7 @@ export function LiquidVideoPlayer({
           aria-label="Loading video"
           className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
         >
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent/20 border-t-accent" />
+          <div className="h-12 w-12 animate-spin motion-reduce:animate-none rounded-full border-4 border-accent/20 border-t-accent" />
           <span className="mt-3 text-sm font-semibold text-text-primary">Loading video stream...</span>
         </div>
       )}

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, Plus, Check, Star, Pause } from 'lucide-react';
 import { getBackdropUrl } from '../../api/tmdb';
 import { getMediaTitle, getMediaDate, getYear, getMediaType, formatRating } from '../../lib/utils';
-import { useWatchlistStore } from '../../store/watchlistStore';
+import { useWatchlistStore } from '../../stores/watchlistStore';
 import { useDominantColors } from '../ambient/useDominantColors';
 import { HeroSkeleton } from '../ui/Skeleton';
 import type { TMDBMovie, TMDBTVShow } from '../../api/tmdb.types';
@@ -112,6 +112,8 @@ export function CinematicHero({ items }: CinematicHeroProps) {
               src={backdropUrl}
               alt=""
               aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
               className="h-full w-full object-cover object-center"
             />
           )}
@@ -238,7 +240,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
                     className="flex h-11 min-w-[24px] px-1 items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md"
                   >
                     <span
-                      className={`block h-2 rounded-full transition-all duration-300 ${
+                      className={`block h-2 rounded-full transition-[width,background-color] duration-300 ${
                         isActive
                           ? 'w-6 bg-accent shadow-sm'
                           : 'w-2 bg-white/40 hover:bg-white/70'

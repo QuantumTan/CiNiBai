@@ -54,7 +54,7 @@ export function HomePage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
           <Link
             to="/network/netflix"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Netflix network titles"
           >
             <span className="text-base sm:text-lg font-black tracking-widest text-text-primary group-hover:text-accent transition-colors">
@@ -63,7 +63,7 @@ export function HomePage() {
           </Link>
           <Link
             to="/network/hbo"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="HBO Max network titles"
           >
             <span className="text-base sm:text-lg font-black tracking-wider text-text-primary group-hover:text-accent transition-colors">
@@ -72,7 +72,7 @@ export function HomePage() {
           </Link>
           <Link
             to="/network/prime"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Amazon Prime Video network titles"
           >
             <span className="text-sm sm:text-base font-bold text-text-primary group-hover:text-accent transition-colors">
@@ -81,7 +81,7 @@ export function HomePage() {
           </Link>
           <Link
             to="/network/disney"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Disney+ network titles"
           >
             <span className="text-base sm:text-lg font-bold text-text-primary group-hover:text-accent transition-colors">
@@ -90,7 +90,7 @@ export function HomePage() {
           </Link>
           <Link
             to="/network/hulu"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Hulu network titles"
           >
             <span className="text-lg sm:text-xl font-black tracking-tighter text-text-primary group-hover:text-accent transition-colors">
@@ -99,7 +99,7 @@ export function HomePage() {
           </Link>
           <Link
             to="/network/apple"
-            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-all duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex h-14 sm:h-16 items-center justify-center rounded-xl bg-bg-surface/80 border border-border-default hover:border-border-strong hover:bg-bg-elevated transition-colors duration-150 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Apple TV+ network titles"
           >
             <span className="text-sm sm:text-base font-semibold text-text-primary group-hover:text-accent transition-colors">

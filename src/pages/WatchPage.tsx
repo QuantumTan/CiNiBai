@@ -297,7 +297,7 @@ export function WatchPage() {
             {/* Seamless subtle loading overlay while iframe initializes */}
             {isIframeLoading && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none transition-opacity duration-300">
-                <Loader2 size={38} className="text-accent animate-spin mb-3" aria-hidden="true" />
+                <Loader2 size={38} className="text-accent animate-spin motion-reduce:animate-none mb-3" aria-hidden="true" />
                 <p className="text-sm font-semibold text-text-primary">
                   Connecting to {activeProvider.name}...
                 </p>
@@ -389,9 +389,9 @@ export function WatchPage() {
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => handleManualServerSelect(provider)}
-                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isSelected
-                          ? 'bg-accent text-on-accent shadow-md scale-[1.02]'
+                          ? 'bg-accent text-on-accent shadow-md'
                           : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong hover:bg-white/10'
                       }`}
                       aria-label={`${provider.name} - ${isSelected ? 'Active' : 'Switch to mirror'}`}
@@ -443,6 +443,8 @@ export function WatchPage() {
                   src={posterUrl}
                   alt=""
                   aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full aspect-[2/3] rounded-lg border border-border-default shadow-md object-cover"
                 />
               </div>
@@ -558,6 +560,7 @@ export function WatchPage() {
                             alt=""
                             className="h-full w-full object-cover"
                             loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-xs font-bold text-text-secondary">

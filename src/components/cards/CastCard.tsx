@@ -18,6 +18,7 @@ export function CastCard({ member }: CastCardProps) {
             alt={member.name}
             className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-bg-surface text-text-secondary">
