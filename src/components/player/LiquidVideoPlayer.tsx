@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
@@ -10,13 +10,15 @@ import {
   VolumeX,
   Maximize,
   Minimize,
-  PictureInPicture2,
-  Sparkles,
-  Subtitles,
   ArrowLeft,
-  Check
+  HelpCircle,
+  X,
+  AlertCircle,
+  RotateCcw as RetryIcon
 } from 'lucide-react';
-import { useAmbientCanvas } from '../../context/AmbientCanvasContext';
+import { Scrubber } from './Scrubber';
+import { useHotkeys } from './useHotkeys';
+import { useSpatialMotion } from '../../lib/motion';
 
 export interface Chapter {
   time: number;
@@ -30,14 +32,10 @@ export interface LiquidVideoPlayerProps {
   poster?: string;
   onBack?: () => void;
   chapters?: Chapter[];
+  isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
 }
-
-const DEFAULT_CHAPTERS: Chapter[] = [
-  { time: 0, title: 'Prologue' },
-  { time: 180, title: 'The Awakening' },
-  { time: 640, title: 'The Encounter' },
-  { time: 1200, title: 'Resolution' },
-];
 
 export function LiquidVideoPlayer({
   src,
@@ -45,14 +43,14 @@ export function LiquidVideoPlayer({
   subtitle,
   poster,
   onBack,
-  chapters = DEFAULT_CHAPTERS,
+  chapters = [],
+  isLoading = false,
+  isError = false,
+  onRetry,
 }: LiquidVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const scrubberRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const { ambientEnabled, setAmbientEnabled } = useAmbientCanvas();
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -63,475 +61,354 @@ export function LiquidVideoPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  // Scrubber Hover Preview state
-  const [isHoveringScrubber, setIsHoveringScrubber] = useState(false);
-  const [hoverPosition, setHoverPosition] = useState(0);
-  const [hoverTime, setHoverTime] = useState(0);
-
-  // Audio / Subtitles Drawer
-  const [showSubtitleDrawer, setShowSubtitleDrawer] = useState(false);
-  const [selectedSubtitle, setSelectedSubtitle] = useState<'off' | 'en' | 'es' | 'ja'>('en');
-  const [selectedAudio, setSelectedAudio] = useState<'original' | 'dubbed'>('original');
-
-  // Hotkey HUD Indicator state
-  const [hudMessage, setHudMessage] = useState<string | null>(null);
-  const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const triggerHud = (message: string) => {
-    setHudMessage(message);
-    if (hudTimerRef.current) clearTimeout(hudTimerRef.current);
-    hudTimerRef.current = setTimeout(() => {
-      setHudMessage(null);
-    }, 1500);
-  };
+  const { springSnappy } = useSpatialMotion();
 
   // Reset 2.5s Inactivity Timer
   const handleUserActivity = useCallback(() => {
     setShowControls(true);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (isPlaying) {
+    if (isPlaying && !showHelpModal) {
       idleTimerRef.current = setTimeout(() => {
-        if (!showSubtitleDrawer) {
-          setShowControls(false);
-        }
+        setShowControls(false);
       }, 2500);
     }
-  }, [isPlaying, showSubtitleDrawer]);
+  }, [isPlaying, showHelpModal]);
 
   useEffect(() => {
-    handleUserActivity();
+    const handleMove = () => handleUserActivity();
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('touchstart', handleMove);
     return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('touchstart', handleMove);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [isPlaying, handleUserActivity]);
+  }, [handleUserActivity]);
 
-  // Video Time & Buffer Tracking
-  const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
-    setCurrentTime(videoRef.current.currentTime);
-
-    if (videoRef.current.buffered.length > 0) {
-      const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-      setBuffered(bufferedEnd);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (!videoRef.current) return;
-    setDuration(videoRef.current.duration);
-  };
-
-  const togglePlay = useCallback(() => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-      triggerHud('Playing');
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-      triggerHud('Paused');
-    }
+  // Fullscreen change listener to sync Esc and browser exits
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const skipSeconds = useCallback((seconds: number) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = Math.min(
-      Math.max(videoRef.current.currentTime + seconds, 0),
-      duration
-    );
-    triggerHud(seconds > 0 ? '+10s Skip' : '-10s Rewind');
-  }, [duration]);
-
-  const handleVolumeChange = useCallback((newVolume: number) => {
-    if (!videoRef.current) return;
-    const clamped = Math.min(Math.max(newVolume, 0), 1);
-    videoRef.current.volume = clamped;
-    setVolume(clamped);
-    setIsMuted(clamped === 0);
-    triggerHud(`Volume ${Math.round(clamped * 100)}%`);
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    if (!videoRef.current) return;
-    const targetMute = !isMuted;
-    videoRef.current.muted = targetMute;
-    setIsMuted(targetMute);
-    triggerHud(targetMute ? 'Muted' : `Volume ${Math.round(volume * 100)}%`);
-  }, [isMuted, volume]);
-
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen?.();
-      setIsFullscreen(true);
-      triggerHud('Fullscreen');
+      containerRef.current.requestFullscreen().catch(() => {});
     } else {
-      document.exitFullscreen?.();
-      setIsFullscreen(false);
-      triggerHud('Windowed');
-    }
-  }, []);
-
-  const togglePiP = async () => {
-    if (!videoRef.current) return;
-    try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-        triggerHud('Exit PiP');
-      } else {
-        await videoRef.current.requestPictureInPicture();
-        triggerHud('Picture in Picture');
-      }
-    } catch {
-      triggerHud('PiP not available');
+      document.exitFullscreen().catch(() => {});
     }
   };
 
-  // Keyboard Hotkey Engine
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if user is typing in an input
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
-        return;
-      }
-
-      switch (e.code) {
-        case 'Space':
-        case 'KeyK':
-          e.preventDefault();
-          togglePlay();
-          break;
-        case 'KeyJ':
-          e.preventDefault();
-          skipSeconds(-10);
-          break;
-        case 'KeyL':
-          e.preventDefault();
-          skipSeconds(10);
-          break;
-        case 'KeyF':
-          e.preventDefault();
-          toggleFullscreen();
-          break;
-        case 'KeyM':
-          e.preventDefault();
-          toggleMute();
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          handleVolumeChange(volume + 0.1);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          handleVolumeChange(volume - 0.1);
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [volume, togglePlay, skipSeconds, toggleFullscreen, toggleMute, handleVolumeChange]);
-
-  // Scrubber Hover Calculation
-  const handleScrubberMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrubberRef.current || duration === 0) return;
-    const rect = scrubberRef.current.getBoundingClientRect();
-    const pos = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    setHoverPosition(pos);
-    setHoverTime(pos * duration);
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play().catch(() => {});
+      setIsPlaying(true);
+    } else {
+      v.pause();
+      setIsPlaying(false);
+    }
   };
 
-  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrubberRef.current || !videoRef.current || duration === 0) return;
-    const rect = scrubberRef.current.getBoundingClientRect();
-    const pos = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    const targetTime = pos * duration;
-    videoRef.current.currentTime = targetTime;
-    setCurrentTime(targetTime);
+  const handleSeek = (deltaSeconds: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Math.min(Math.max(v.currentTime + deltaSeconds, 0), v.duration || 0);
   };
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
+  const handleAbsoluteSeek = (targetTime: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Math.min(Math.max(targetTime, 0), v.duration || 0);
+    setCurrentTime(v.currentTime);
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    const nextMuted = !isMuted;
+    v.muted = nextMuted;
+    setIsMuted(nextMuted);
+  };
+
+  const handleVolumeChange = (newVol: number) => {
+    const clamped = Math.max(0, Math.min(1, newVol));
+    setVolume(clamped);
+    if (videoRef.current) {
+      videoRef.current.volume = clamped;
+      videoRef.current.muted = clamped === 0;
+      setIsMuted(clamped === 0);
+    }
+  };
+
+  // Hotkeys integrated with help modal & focus awareness
+  useHotkeys(
+    {
+      onTogglePlay: togglePlay,
+      onSeek: handleSeek,
+      onVolumeDelta: (delta) => handleVolumeChange(volume + delta),
+      onToggleMute: toggleMute,
+      onToggleFullscreen: toggleFullscreen,
+      onToggleHelp: () => setShowHelpModal((prev) => !prev),
+      onCloseModal: () => setShowHelpModal(false),
+      isModalOpen: showHelpModal,
+    },
+    true
+  );
+
+  const formatTime = (secs: number) => {
+    if (isNaN(secs) || secs < 0) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Find active chapter title
-  const currentChapter = chapters
-    .slice()
-    .reverse()
-    .find((c) => currentTime >= c.time);
+  const activeChapter = chapters.length > 0
+    ? chapters.slice().reverse().find((c) => currentTime >= c.time)?.title
+    : null;
 
   return (
     <div
       ref={containerRef}
       onMouseMove={handleUserActivity}
       onClick={handleUserActivity}
-      className="relative aspect-video w-full overflow-hidden bg-black select-none rounded-3xl shadow-2xl group/player"
+      className="relative aspect-video w-full overflow-hidden rounded-xl bg-bg-overlay select-none shadow-xl border border-border-default focus-within:ring-2 focus-within:ring-accent"
+      tabIndex={0}
+      aria-label={`Video player: ${title}`}
     >
-      {/* HTML5 Native Video Tag */}
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onClick={togglePlay}
-        playsInline
-        className="h-full w-full object-contain cursor-pointer"
-      />
+      {/* Poster Fallback Layer */}
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-40 blur-sm pointer-events-none"
+        />
+      )}
 
-      {/* Hotkey HUD Indicator Toast */}
-      <AnimatePresence>
-        {hudMessage && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-            className="liquid-glass-elevated pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 z-50 rounded-full px-5 py-2 text-sm font-semibold tracking-wide text-white shadow-2xl"
-          >
-            {hudMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Actual HTML5 Video or Embed */}
+      {src && (
+        <video
+          ref={videoRef}
+          src={src}
+          playsInline
+          poster={poster}
+          onTimeUpdate={() => {
+            if (videoRef.current) {
+              setCurrentTime(videoRef.current.currentTime);
+              setDuration(videoRef.current.duration || 0);
+              if (videoRef.current.buffered.length > 0) {
+                setBuffered(videoRef.current.buffered.end(videoRef.current.buffered.length - 1));
+              }
+            }
+          }}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+      )}
 
-      {/* Player Overlays (Auto-hidden on 2.5s Inactivity) */}
+      {/* Loading Spinner */}
+      {isLoading && (
+        <div
+          role="status"
+          aria-label="Loading video"
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+        >
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent/20 border-t-accent" />
+          <span className="mt-3 text-sm font-semibold text-text-primary">Loading video stream...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {isError && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 p-6 text-center"
+        >
+          <AlertCircle size={40} className="text-error mb-3" aria-hidden="true" />
+          <h3 className="text-base font-bold text-text-primary">Couldn't load this video source</h3>
+          <p className="mt-1 text-xs text-text-muted max-w-sm">
+            The server may be currently offline or unresponsive. Try switching to another source.
+          </p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-4 flex items-center gap-2 rounded-md bg-accent text-on-accent px-5 py-2.5 text-xs font-semibold min-h-[44px] hover:bg-accent-light active:bg-accent-dark cursor-pointer transition-colors"
+            >
+              <RetryIcon size={16} aria-hidden="true" />
+              <span>Retry Stream</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Player Chrome Controls Overlay */}
       <AnimatePresence>
-        {showControls && (
+        {(showControls || !isPlaying) && !isLoading && !isError && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 bg-gradient-to-t from-black/80 via-transparent to-black/60"
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 z-20 flex flex-col justify-between p-3 sm:p-4 bg-gradient-to-t from-black/85 via-transparent to-black/75 pointer-events-none"
           >
-            {/* Top Navigation Bar */}
-            <div className="pointer-events-auto flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            {/* Top Bar: Back (44px text + icon) + Title + Chapter Chip */}
+            <div className="flex items-center justify-between gap-3 pointer-events-auto">
+              <div className="flex items-center gap-3 min-w-0">
                 {onBack && (
                   <button
+                    type="button"
                     onClick={onBack}
-                    className="liquid-glass-control flex h-10 w-10 items-center justify-center rounded-full text-white"
-                    aria-label="Back"
+                    className="flex h-11 items-center gap-2 rounded-full px-3.5 bg-black/60 border border-border-default text-text-primary hover:bg-black/80 hover:border-border-strong cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Back to Browse"
                   >
-                    <ArrowLeft size={18} />
+                    <ArrowLeft size={18} aria-hidden="true" />
+                    <span className="text-xs font-semibold hidden sm:inline">Back</span>
                   </button>
                 )}
-                <div>
-                  <h2 className="text-lg font-bold text-white drop-shadow-md">
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-base font-bold text-text-primary truncate" title={title}>
                     {title}
                   </h2>
                   {subtitle && (
-                    <p className="text-xs font-medium text-slate-300 drop-shadow-sm">
-                      {subtitle}
-                    </p>
+                    <p className="text-xs text-text-muted truncate">{subtitle}</p>
                   )}
                 </div>
               </div>
 
-              {/* Ambient Lighting Toggle & Audio Drawer */}
+              {/* Chapter Chip (hidden below 360px) */}
               <div className="flex items-center gap-2">
+                {activeChapter && (
+                  <span className="hidden xs:inline-flex rounded-full bg-accent/20 border border-accent/40 px-3 py-1 text-xs font-semibold text-accent-light">
+                    {activeChapter}
+                  </span>
+                )}
+                {/* Help Button */}
                 <button
-                  onClick={() => setAmbientEnabled((p) => !p)}
-                  className={`liquid-glass-control flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    ambientEnabled ? 'text-amber-300' : 'text-slate-400'
-                  }`}
-                  aria-label="Toggle Ambient Glow"
+                  type="button"
+                  onClick={() => setShowHelpModal(true)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label="Keyboard Shortcuts Help"
+                  title="Keyboard Shortcuts"
                 >
-                  <Sparkles size={14} className={ambientEnabled ? 'fill-amber-300' : ''} />
-                  <span>Ambient Light</span>
-                </button>
-
-                <button
-                  onClick={() => setShowSubtitleDrawer((prev) => !prev)}
-                  className={`liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors ${
-                    showSubtitleDrawer ? 'bg-amber-400/20 text-amber-300' : ''
-                  }`}
-                  aria-label="Audio and Subtitles"
-                >
-                  <Subtitles size={17} />
+                  <HelpCircle size={18} aria-hidden="true" />
                 </button>
               </div>
             </div>
 
-            {/* Center Big Play/Pause Touch Indicator */}
-            <div className="pointer-events-auto flex items-center justify-center">
-              <motion.button
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
+            {/* Center Play Button for Quick Touch Toggle */}
+            <div className="self-center pointer-events-auto">
+              <button
+                type="button"
                 onClick={togglePlay}
-                className="liquid-glass-elevated flex h-18 w-18 items-center justify-center rounded-full text-white shadow-2xl"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-on-accent hover:bg-accent-light active:scale-95 shadow-xl transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isPlaying ? (
-                  <Pause size={30} className="fill-white" />
+                  <Pause size={28} className="fill-current" aria-hidden="true" />
                 ) : (
-                  <Play size={30} className="fill-white ml-1" />
+                  <Play size={28} className="fill-current ml-1" aria-hidden="true" />
                 )}
-              </motion.button>
+              </button>
             </div>
 
-            {/* Bottom Scrubber & Deck Controls */}
-            <div className="pointer-events-auto space-y-3">
-              {/* Liquid Scrubber Bar */}
-              <div
-                ref={scrubberRef}
-                onMouseEnter={() => setIsHoveringScrubber(true)}
-                onMouseLeave={() => setIsHoveringScrubber(false)}
-                onMouseMove={handleScrubberMouseMove}
-                onClick={handleScrubberClick}
-                className="group/scrubber relative flex h-7 cursor-pointer items-center py-2"
-              >
-                {/* Frame Hover Tooltip Preview */}
-                <AnimatePresence>
-                  {isHoveringScrubber && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="liquid-glass-elevated pointer-events-none absolute bottom-9 -translate-x-1/2 rounded-xl p-2 text-center shadow-xl"
-                      style={{ left: `${hoverPosition * 100}%` }}
-                    >
-                      <div className="aspect-video w-32 overflow-hidden rounded-lg bg-neutral-900 border border-white/10 mb-1">
-                        <img
-                          src={poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300'}
-                          alt="Thumbnail preview"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-amber-300">
-                        {formatTime(hoverTime)}
-                      </span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            {/* Bottom Deck: Scrubber + Controls Row */}
+            <div className="space-y-2 pointer-events-auto">
+              {/* Scrubber */}
+              <Scrubber
+                currentTime={currentTime}
+                duration={duration}
+                bufferedTime={buffered}
+                chapters={chapters}
+                onSeek={handleAbsoluteSeek}
+              />
 
-                {/* Track Base */}
-                <div className="relative h-1.5 w-full rounded-full bg-white/20 transition-all duration-200 group-hover/scrubber:h-2.5">
-                  {/* Buffered Track */}
-                  <div
-                    className="absolute top-0 bottom-0 left-0 rounded-full bg-white/30"
-                    style={{ width: `${(buffered / (duration || 1)) * 100}%` }}
-                  />
-
-                  {/* Played Track with Refracted Gradient */}
-                  <div
-                    className="absolute top-0 bottom-0 left-0 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-white shadow-[0_0_12px_rgba(251,191,36,0.6)]"
-                    style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
-                  />
-
-                  {/* Chapter Marker Notches */}
-                  {duration > 0 &&
-                    chapters.map((ch) => (
-                      <div
-                        key={ch.time}
-                        className="absolute top-0 bottom-0 w-[2px] bg-black/60 z-10"
-                        style={{ left: `${(ch.time / duration) * 100}%` }}
-                        title={ch.title}
-                      />
-                    ))}
-
-                  {/* Glowing Scrubber Thumb */}
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] opacity-0 group-hover/scrubber:opacity-100 transition-opacity"
-                    style={{ left: `${(currentTime / (duration || 1)) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Floating Glass Control Deck */}
-              <div className="flex items-center justify-between text-slate-200">
-                <div className="flex items-center gap-4">
-                  {/* 10s Rewind */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => skipSeconds(-10)}
-                    className="liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full"
-                    aria-label="Rewind 10 seconds"
+              {/* Lower Controls Toolbar */}
+              <div className="flex items-center justify-between gap-3 text-text-primary text-xs">
+                {/* Left controls: Play, Skip ±10s, Volume, Time Readout */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={togglePlay}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
                   >
-                    <RotateCcw size={16} />
-                  </motion.button>
+                    {isPlaying ? <Pause size={18} aria-hidden="true" /> : <Play size={18} className="ml-0.5" aria-hidden="true" />}
+                  </button>
 
-                  {/* 10s Fast Forward */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => skipSeconds(10)}
-                    className="liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full"
-                    aria-label="Forward 10 seconds"
+                  <button
+                    type="button"
+                    onClick={() => handleSeek(-10)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Skip back 10 seconds"
                   >
-                    <RotateCw size={16} />
-                  </motion.button>
+                    <RotateCcw size={16} aria-hidden="true" />
+                  </button>
 
-                  {/* Volume Control */}
-                  <div className="flex items-center gap-2 group/volume">
+                  <button
+                    type="button"
+                    onClick={() => handleSeek(10)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Skip forward 10 seconds"
+                  >
+                    <RotateCw size={16} aria-hidden="true" />
+                  </button>
+
+                  {/* Volume Slider + Mute Button */}
+                  <div className="flex items-center gap-1.5 ml-1">
                     <button
+                      type="button"
                       onClick={toggleMute}
-                      className="liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full"
-                      aria-label={isMuted ? 'Unmute' : 'Mute'}
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
+                      aria-pressed={isMuted || volume === 0}
                     >
                       {isMuted || volume === 0 ? (
-                        <VolumeX size={16} />
+                        <VolumeX size={16} aria-hidden="true" />
                       ) : volume < 0.5 ? (
-                        <Volume1 size={16} />
+                        <Volume1 size={16} aria-hidden="true" />
                       ) : (
-                        <Volume2 size={16} />
+                        <Volume2 size={16} aria-hidden="true" />
                       )}
                     </button>
                     <input
                       type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
+                      min="0"
+                      max="1"
+                      step="0.05"
                       value={isMuted ? 0 : volume}
                       onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                      className="w-16 accent-amber-400 cursor-pointer h-1.5 opacity-70 group-hover/volume:opacity-100 transition-opacity"
+                      className="hidden sm:block h-1.5 w-16 accent-accent rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Volume slider"
                     />
                   </div>
 
-                  {/* Time & Chapter Display */}
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-                    <span>{formatTime(currentTime)}</span>
-                    <span className="text-slate-500">/</span>
-                    <span>{formatTime(duration)}</span>
-                    {currentChapter && (
-                      <span className="ml-2 font-sans rounded bg-white/10 px-2 py-0.5 text-[10px] text-amber-300 font-semibold hidden sm:inline">
-                        {currentChapter.title}
-                      </span>
-                    )}
-                  </div>
+                  {/* Time Readout */}
+                  <span className="font-mono text-xs text-text-secondary ml-2">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
                 </div>
 
-                {/* Right Action Icons */}
-                <div className="flex items-center gap-3">
-                  {/* PiP Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={togglePiP}
-                    className="liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full"
-                    aria-label="Picture in Picture"
-                  >
-                    <PictureInPicture2 size={16} />
-                  </motion.button>
-
-                  {/* Fullscreen Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
+                {/* Right controls: Fullscreen */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
                     onClick={toggleFullscreen}
-                    className="liquid-glass-control flex h-9 w-9 items-center justify-center rounded-full"
-                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 border border-border-default hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                   >
-                    {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-                  </motion.button>
+                    {isFullscreen ? <Minimize size={18} aria-hidden="true" /> : <Maximize size={18} aria-hidden="true" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -539,69 +416,73 @@ export function LiquidVideoPlayer({
         )}
       </AnimatePresence>
 
-      {/* Subtitles & Audio Sliding Drawer with Glass Backdrop */}
+      {/* Hardware Keyboard Shortcut Modal (responsive dialog) */}
       <AnimatePresence>
-        {showSubtitleDrawer && (
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 50 }}
-            className="liquid-glass-elevated pointer-events-auto absolute top-16 right-6 z-40 w-72 rounded-2xl p-5 shadow-2xl backdrop-blur-3xl"
+        {showHelpModal && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard Shortcuts"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setShowHelpModal(false)}
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-              Audio & Subtitles
-            </h3>
-
-            {/* Audio Section */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-white block mb-2">Audio Track</label>
-              <div className="space-y-1">
-                {[
-                  { id: 'original', label: 'English [Original] (Dolby Atmos)' },
-                  { id: 'dubbed', label: 'Spanish (5.1 Surround)' },
-                ].map((track) => (
-                  <button
-                    key={track.id}
-                    onClick={() => setSelectedAudio(track.id as any)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      selectedAudio === track.id
-                        ? 'bg-amber-400/20 text-amber-300 font-bold'
-                        : 'text-slate-300 hover:bg-white/5'
-                    }`}
-                  >
-                    <span>{track.label}</span>
-                    {selectedAudio === track.id && <Check size={14} />}
-                  </button>
-                ))}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={springSnappy}
+              onClick={(e) => e.stopPropagation()}
+              className="apple-glass-heavy w-full max-w-lg rounded-xl p-5 sm:p-6 border border-border-default shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
+                  Keyboard Shortcuts
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(false)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-text-secondary hover:text-text-primary border border-border-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer"
+                  aria-label="Close shortcuts dialog"
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
               </div>
-            </div>
-
-            {/* Subtitles Section */}
-            <div>
-              <label className="text-xs font-semibold text-white block mb-2">Subtitles</label>
-              <div className="space-y-1">
-                {[
-                  { id: 'off', label: 'Off' },
-                  { id: 'en', label: 'English [CC]' },
-                  { id: 'es', label: 'Spanish' },
-                  { id: 'ja', label: 'Japanese' },
-                ].map((sub) => (
-                  <button
-                    key={sub.id}
-                    onClick={() => setSelectedSubtitle(sub.id as any)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      selectedSubtitle === sub.id
-                        ? 'bg-amber-400/20 text-amber-300 font-bold'
-                        : 'text-slate-300 hover:bg-white/5'
-                    }`}
-                  >
-                    <span>{sub.label}</span>
-                    {selectedSubtitle === sub.id && <Check size={14} />}
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Play / Pause</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">Space / K</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Seek ±10s</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">J / L</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Seek ±5s</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">← / →</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Volume ±5%</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">↑ / ↓</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Fullscreen</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">F</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Mute</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">M</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Help Guide</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">?</kbd>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-border-subtle">
+                  <span className="text-text-secondary">Close Dialog</span>
+                  <kbd className="bg-white/10 px-2 py-0.5 rounded font-mono text-accent-light">Esc</kbd>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -179,6 +179,22 @@ export function useSearchMulti(query: string) {
   });
 }
 
+export function useInfiniteSearchMulti(query: string) {
+  return useInfiniteQuery({
+    queryKey: ['search', 'infinite', query],
+    queryFn: ({ pageParam = 1 }) => searchMulti(query, pageParam),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < Math.min(lastPage.total_pages, 500)) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+    staleTime: STALE_TIMES.search,
+    enabled: query.trim().length >= 2,
+  });
+}
+
 // --- Genres ---
 export function useMovieGenres() {
   return useQuery({

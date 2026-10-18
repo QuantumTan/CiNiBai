@@ -3,15 +3,13 @@ import { useEffect } from 'react';
 export interface HotkeyActions {
   onTogglePlay: () => void;
   onSeek: (seconds: number) => void;
-  onJumpPercent: (percent: number) => void;
+  onJumpPercent?: (percent: number) => void;
   onVolumeDelta: (delta: number) => void;
   onToggleMute: () => void;
   onToggleFullscreen: () => void;
-  onToggleCaptions: () => void;
-  onTogglePiP: () => void;
-  onFrameStep: (forward: boolean) => void;
-  onSpeedDelta: (faster: boolean) => void;
   onToggleHelp: () => void;
+  onCloseModal?: () => void;
+  isModalOpen?: boolean;
 }
 
 export function useHotkeys(actions: HotkeyActions, enabled: boolean = true) {
@@ -19,9 +17,28 @@ export function useHotkeys(actions: HotkeyActions, enabled: boolean = true) {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore keystrokes inside form fields
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      // If modal or drawer is open, handle Escape to close it and prevent all other hotkeys
+      if (actions.isModalOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          actions.onCloseModal?.();
+        }
         return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tagName = target.tagName;
+        // Ignore keystrokes when focus is in input, textarea, select, button, or contenteditable
+        if (
+          tagName === 'INPUT' ||
+          tagName === 'TEXTAREA' ||
+          tagName === 'SELECT' ||
+          tagName === 'BUTTON' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
       }
 
       switch (e.code) {
@@ -62,22 +79,6 @@ export function useHotkeys(actions: HotkeyActions, enabled: boolean = true) {
           e.preventDefault();
           actions.onToggleFullscreen();
           break;
-        case 'KeyC':
-          e.preventDefault();
-          actions.onToggleCaptions();
-          break;
-        case 'KeyP':
-          e.preventDefault();
-          actions.onTogglePiP();
-          break;
-        case 'Comma':
-          e.preventDefault();
-          actions.onFrameStep(false);
-          break;
-        case 'Period':
-          e.preventDefault();
-          actions.onFrameStep(true);
-          break;
         case 'Slash':
           if (e.shiftKey) {
             e.preventDefault();
@@ -85,8 +86,7 @@ export function useHotkeys(actions: HotkeyActions, enabled: boolean = true) {
           }
           break;
         default:
-          // 0-9 percentage jump (§4.5)
-          if (e.code.startsWith('Digit')) {
+          if (e.code.startsWith('Digit') && actions.onJumpPercent) {
             const digit = parseInt(e.code.replace('Digit', ''), 10);
             if (!isNaN(digit)) {
               e.preventDefault();

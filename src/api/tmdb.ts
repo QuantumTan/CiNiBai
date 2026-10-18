@@ -40,19 +40,29 @@ export type PosterSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'o
 export type BackdropSize = 'w300' | 'w780' | 'w1280' | 'original';
 export type ProfileSize = 'w45' | 'w185' | 'h632' | 'original';
 
-export function getPosterUrl(path: string | null, size: PosterSize = 'w500'): string {
-  if (!path) return '/placeholder-poster.svg';
-  return `${IMAGE_BASE_URL}/${size}${path}`;
+export function getPosterUrl(path: string | null | undefined, size: PosterSize = 'w342'): string {
+  if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
+  return `${IMAGE_BASE_URL}/${size}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function getBackdropUrl(path: string | null, size: BackdropSize = 'w1280'): string {
-  if (!path) return '/placeholder-backdrop.svg';
-  return `${IMAGE_BASE_URL}/${size}${path}`;
+export function getBackdropUrl(path: string | null | undefined, size: BackdropSize = 'w1280'): string {
+  if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
+  return `${IMAGE_BASE_URL}/${size}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function getProfileUrl(path: string | null, size: ProfileSize = 'w185'): string {
-  if (!path) return '/placeholder-profile.svg';
-  return `${IMAGE_BASE_URL}/${size}${path}`;
+export function getProfileUrl(path: string | null | undefined, size: ProfileSize = 'w185'): string {
+  if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
+  return `${IMAGE_BASE_URL}/${size}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+/**
+ * Responsive srcset helper for posters
+ * Sizes guidance: (max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw
+ */
+export function getPosterSrcSet(path: string | null | undefined): string {
+  if (!path || typeof path !== 'string' || path.includes('undefined')) return '';
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `${IMAGE_BASE_URL}/w185${clean} 185w, ${IMAGE_BASE_URL}/w342${clean} 342w, ${IMAGE_BASE_URL}/w500${clean} 500w, ${IMAGE_BASE_URL}/w780${clean} 780w`;
 }
 
 // --- Trending ---

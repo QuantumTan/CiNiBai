@@ -1,4 +1,11 @@
-// High-availability multi-mirror embed provider registry
+// Provider IDs as constants
+export const PROVIDER_IDS = {
+  VIDLINK: 'mirror-1',
+  CINESRC: 'mirror-2',
+  VIDSRC: 'mirror-3',
+  VIDSRC_CC: 'mirror-4',
+  AUTOEMBED: 'mirror-5',
+} as const;
 
 export interface EmbedSource {
   id: string;
@@ -13,7 +20,7 @@ export interface EmbedSource {
 // Mirrors ranked by playback responsiveness, buffer rate, and minimal overlays
 const providers: EmbedSource[] = [
   {
-    id: 'mirror-1',
+    id: PROVIDER_IDS.VIDLINK,
     name: 'Mirror 1 (VidLink)',
     badge: 'Recommended',
     host: 'vidlink.pro',
@@ -23,7 +30,7 @@ const providers: EmbedSource[] = [
       `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?autoplay=${autoPlay ? 'true' : 'false'}&nextbutton=true`,
   },
   {
-    id: 'mirror-2',
+    id: PROVIDER_IDS.CINESRC,
     name: 'Mirror 2 (CineSrc)',
     badge: 'Fast',
     host: 'cinesrc.st',
@@ -31,7 +38,7 @@ const providers: EmbedSource[] = [
     getTVUrl: (tmdbId, season, episode) => `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
   },
   {
-    id: 'mirror-3',
+    id: PROVIDER_IDS.VIDSRC,
     name: 'Mirror 3 (VidSrc)',
     host: 'vidsrc.to',
     getMovieUrl: (tmdbId, _imdbId, autoPlay = true) =>
@@ -40,7 +47,7 @@ const providers: EmbedSource[] = [
       `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}?autoplay=${autoPlay ? 1 : 0}`,
   },
   {
-    id: 'mirror-4',
+    id: PROVIDER_IDS.VIDSRC_CC,
     name: 'Mirror 4 (VidSrc CC)',
     host: 'vidsrc.cc',
     needsImdbId: true,
@@ -50,7 +57,7 @@ const providers: EmbedSource[] = [
       `https://vidsrc.cc/v2/embed/tv/${imdbId || tmdbId}/${season}/${episode}?poster=true&autoPlay=${autoPlay ? 'true' : 'false'}`,
   },
   {
-    id: 'mirror-5',
+    id: PROVIDER_IDS.AUTOEMBED,
     name: 'Mirror 5 (AutoEmbed)',
     host: 'player.autoembed.cc',
     getMovieUrl: (tmdbId) => `https://player.autoembed.cc/embed/movie/${tmdbId}`,

@@ -1,38 +1,53 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'gold' | 'outline' | 'ghost' | 'glass';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'gold' | 'ghost' | 'outline' | 'glass' | 'icon';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
 }
 
 const variantStyles = {
-  gold: 'bg-amber-400 text-black font-semibold hover:bg-amber-300 active:bg-amber-500 shadow-md',
-  glass: 'apple-glass-regular text-white hover:text-amber-300 hover:border-amber-400/40 shadow-sm',
-  outline: 'apple-glass-thin text-slate-200 hover:text-white hover:border-white/30',
-  ghost: 'text-slate-300 hover:text-white hover:bg-white/10',
+  primary: 'bg-accent text-on-accent hover:bg-accent-light active:bg-accent-dark active:scale-[0.98] shadow-md border-transparent',
+  gold: 'bg-accent text-on-accent hover:bg-accent-light active:bg-accent-dark active:scale-[0.98] shadow-md border-transparent',
+  ghost: 'bg-white/5 border border-border-default text-text-primary hover:bg-white/10 hover:border-border-strong active:scale-[0.98]',
+  outline: 'bg-white/5 border border-border-default text-text-primary hover:bg-white/10 hover:border-border-strong active:scale-[0.98]',
+  glass: 'apple-glass-regular text-text-primary hover:text-accent-light hover:border-border-strong active:scale-[0.98]',
+  icon: 'h-11 w-11 p-0 rounded-full bg-black/60 border border-border-default text-text-primary hover:bg-black/80 hover:border-border-strong active:scale-[0.98] justify-center',
 };
 
 const sizeStyles = {
-  sm: 'px-3.5 py-1.5 text-xs rounded-full',
-  md: 'px-5 py-2.5 text-sm rounded-full',
-  lg: 'px-8 py-3.5 text-base rounded-full font-semibold',
+  sm: 'px-4 py-2 text-xs min-h-[44px] rounded-md font-semibold',
+  md: 'px-5 py-3 text-sm min-h-[44px] rounded-md font-semibold',
+  lg: 'px-6 py-3.5 text-base min-h-[48px] rounded-md font-semibold',
 };
 
-export function Button({ variant = 'gold', size = 'md', className, children, ...props }: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    className,
+    children,
+    ...props
+  },
+  ref
+) {
+  const isIconButton = variant === 'icon';
+
   return (
     <button
+      ref={ref}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium tracking-tight transition-all duration-200 active:scale-[0.96] select-none outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80',
+        'inline-flex items-center justify-center gap-2 cursor-pointer select-none transition-colors duration-150 ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
         variantStyles[variant],
-        sizeStyles[size],
-        props.disabled && 'cursor-not-allowed opacity-50 active:scale-100',
+        !isIconButton && sizeStyles[size],
+        props.disabled && 'opacity-50 cursor-not-allowed active:scale-100 pointer-events-none',
         className
       )}
+      aria-disabled={props.disabled}
       {...props}
     >
       {children}
     </button>
   );
-}
+});

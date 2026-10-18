@@ -46,6 +46,13 @@ export const useWatchlistStore = create<WatchlistState>()(
     }),
     {
       name: 'cinebai-watchlist',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 || !persistedState) {
+          return { items: [] };
+        }
+        return persistedState as WatchlistState;
+      },
     }
   )
 );

@@ -1,90 +1,70 @@
 /**
- * Apple Optical Material System - Unified Glass Tokens & Typography Scale
+ * Apple Optical Material System - Unified Glass Materials
  * Specification Version 2.1 (Anti-AI-Slop Architecture)
- * Single source of truth across Movies, Series, and Anime.
  */
 
-:root {
-  /* Obsidian Stage Hierarchy */
-  --obsidian-void: #060709;
-  --obsidian-surface: #0a0c10;
-  --obsidian-elevated: #11141b;
-
-  /* Typography System (§3.2) */
-  --font-stack: "SF Pro Display", "SF Pro Text", -apple-system, "Inter Variable", system-ui, sans-serif;
-
-  /* Text Opacity Steps (§3.1, §3.2) */
-  --text-opacity-100: rgba(255, 255, 255, 1);
-  --text-opacity-72: rgba(255, 255, 255, 0.72);
-  --text-opacity-48: rgba(255, 255, 255, 0.48);
-
-  /* Optical Glass Baseline Tiers (§4) */
-  --glass-thin-bg: rgba(10, 12, 16, 0.28);
-  --glass-thin-blur: 24px;
-  --glass-thin-sat: 200%;
-
-  --glass-regular-bg: rgba(10, 12, 16, 0.42);
-  --glass-regular-blur: 32px;
-  --glass-regular-sat: 210%;
-
-  --glass-heavy-bg: rgba(10, 12, 16, 0.68);
-  --glass-heavy-blur: 48px;
-  --glass-heavy-sat: 220%;
-
-  /* Specular & Refraction Lighting */
-  --specular-catch: inset 0 1px 1px 0 rgba(255, 255, 255, 0.38);
-  --refraction-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --ao-bevel: inset 0 -1px 1px 0 rgba(0, 0, 0, 0.5);
-  --contact-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.65);
-
-  --rim-stack: var(--specular-catch), var(--refraction-ring), var(--ao-bevel), var(--contact-shadow);
-
-  /* Pointer Glare Default Position */
-  --pointer-x: 50%;
-  --pointer-y: 0%;
-}
-
-/* =========================================================================
-   1. OPTICAL GLASS TIERS (§4)
-   ========================================================================= */
-
-/* Thin Glass Tier - Transient indicators, pill backgrounds, captions */
+/* Baseline Optical Material Classes */
 .apple-glass-thin {
-  background: var(--glass-thin-bg);
-  backdrop-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-sat)) contrast(110%);
-  -webkit-backdrop-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-sat)) contrast(110%);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4),
-    0 8px 24px -4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  background: rgba(14, 16, 24, 0.55);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(20px) saturate(190%) contrast(108%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%) contrast(108%);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+    var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
-/* Regular Glass Tier - Action Dock, Discovery Bar, Primary Controls */
 .apple-glass-regular {
-  background: var(--glass-regular-bg);
-  backdrop-filter: blur(var(--glass-regular-blur)) saturate(var(--glass-regular-sat)) contrast(115%) brightness(1.03);
-  -webkit-backdrop-filter: blur(var(--glass-regular-blur)) saturate(var(--glass-regular-sat)) contrast(115%) brightness(1.03);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.38),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.5),
-    0 16px 36px -6px rgba(0, 0, 0, 0.65);
+  position: relative;
+  background: rgba(11, 13, 19, 0.72);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.12));
+  backdrop-filter: blur(32px) saturate(210%) contrast(112%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(112%);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
+    var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.45));
 }
 
-/* Heavy Glass Tier - Discussion Drawer, Spotlight Modal */
 .apple-glass-heavy {
-  background: var(--glass-heavy-bg);
-  backdrop-filter: blur(var(--glass-heavy-blur)) saturate(var(--glass-heavy-sat)) contrast(118%) brightness(1.02);
-  -webkit-backdrop-filter: blur(var(--glass-heavy-blur)) saturate(var(--glass-heavy-sat)) contrast(118%) brightness(1.02);
-  box-shadow:
-    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.65),
-    0 24px 48px -8px rgba(0, 0, 0, 0.82);
+  position: relative;
+  background: rgba(8, 10, 15, 0.85);
+  border: 1px solid var(--color-border-strong, rgba(255, 255, 255, 0.20));
+  backdrop-filter: blur(48px) saturate(220%) contrast(115%);
+  -webkit-backdrop-filter: blur(48px) saturate(220%) contrast(115%);
+  box-shadow: 
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.6),
+    var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.55));
 }
 
-/* Specular Rim Tracking - Desktop Cursor Reflection */
+/* Glass Grain Tile */
+.apple-glass-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  z-index: 2;
+}
+
+/* Cursor-Coupled Fresnel Reflection Rim */
+.fresnel-lens {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  background-image:
+    linear-gradient(to bottom, rgba(16, 18, 26, 0.6), rgba(8, 10, 15, 0.85)),
+    radial-gradient(circle 240px at var(--pointer-x, 50%) var(--pointer-y, 0%),
+                    rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.08) 55%, transparent 75%);
+}
+
 .specular-track {
   position: relative;
   overflow: hidden;
@@ -102,96 +82,45 @@
     transparent 80%
   );
   opacity: 0.75;
-  transition: opacity 0.25s ease;
+  transition: opacity var(--duration-fast, 150ms) ease;
 }
 
-/* =========================================================================
-   2. SQUIRCLE UTILITY (§2, §4)
-   ========================================================================= */
+/* Top 10 Numeral */
+.netflix-spatial-numeral {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  line-height: 0.75;
+  letter-spacing: -0.07em;
+  color: #07080c;
+  -webkit-text-stroke: 3.5px rgba(255, 255, 255, 0.88);
+  filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.9)) drop-shadow(0 14px 24px rgba(0, 0, 0, 0.95));
+  user-select: none;
+}
 
+@media (min-width: 768px) {
+  .netflix-spatial-numeral {
+    -webkit-text-stroke: 4.5px rgba(255, 255, 255, 0.92);
+  }
+}
+
+/* Squircle Utility */
 .squircle-card {
-  border-radius: 28px;
+  border-radius: var(--radius-xl, 24px);
   corner-shape: squircle;
 }
 
 @supports not (corner-shape: squircle) {
   .squircle-card {
-    border-radius: 28px;
-    clip-path: inset(0 round 28px);
+    border-radius: var(--radius-xl, 24px);
   }
 }
 
 .squircle-pill {
-  border-radius: 9999px;
+  border-radius: var(--radius-pill, 9999px);
   corner-shape: squircle;
 }
 
-/* =========================================================================
-   3. TYPOGRAPHY UTILITIES (§3.2)
-   ========================================================================= */
-
-.type-title-lockup {
-  font-family: var(--font-stack);
-  font-size: 28px;
-  line-height: 32px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  font-optical-sizing: auto;
-}
-
-@media (max-width: 768px) {
-  .type-title-lockup {
-    font-size: 22px;
-    line-height: 26px;
-  }
-}
-
-.type-section-title {
-  font-family: var(--font-stack);
-  font-size: 20px;
-  line-height: 24px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.type-body {
-  font-family: var(--font-stack);
-  font-size: 15px;
-  line-height: 22px;
-  font-weight: 450;
-  letter-spacing: 0;
-}
-
-.type-label {
-  font-family: var(--font-stack);
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 550;
-  letter-spacing: 0.01em;
-}
-
-.type-meta {
-  font-family: var(--font-stack);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  font-feature-settings: "tnum";
-}
-
-.type-meta-caps {
-  font-family: var(--font-stack);
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* =========================================================================
-   4. VIDEO SCRIM UTILITIES (WCAG 2.1 AA against white frames, §3.1, §4)
-   ========================================================================= */
-
+/* Video Scrim Utilities */
 .scrim-bottom {
   background: linear-gradient(
     to top,
@@ -211,12 +140,39 @@
   );
 }
 
-/* Focus Ring Specification */
+/* Unified Focus Ring Specification - Gold */
 .focus-optical {
   outline: none;
 }
 .focus-optical:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline: 2px solid var(--color-accent, #E5B869);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.65);
+  border-radius: 4px;
+}
+
+/* Accessibility & Preferences Overrides */
+@media (prefers-contrast: more) {
+  .apple-glass-regular,
+  .apple-glass-heavy {
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .apple-glass-thin,
+  .apple-glass-regular,
+  .apple-glass-heavy {
+    background: #0E0E12 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* High contrast / Low-end Tier-C fallback */
+html[data-tier='c'] .apple-glass-thin,
+html[data-tier='c'] .apple-glass-regular,
+html[data-tier='c'] .apple-glass-heavy {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #0E0E12 !important;
 }

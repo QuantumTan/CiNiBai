@@ -1,8 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { QuickPeekCard } from '../cards/QuickPeekCard';
+import { MovieCard } from '../cards/MovieCard';
 import { ContentRowSkeleton } from '../ui/Skeleton';
 import type { TMDBMovie, TMDBTVShow } from '../../api/tmdb.types';
 
@@ -17,7 +16,6 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [activeHoveredId, setActiveHoveredId] = useState<number | null>(null);
 
   const checkScrollState = () => {
     const el = scrollRef.current;
@@ -48,6 +46,14 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight') {
+      handleScroll('right');
+    } else if (e.key === 'ArrowLeft') {
+      handleScroll('left');
+    }
+  };
+
   if (isLoading) {
     return <ContentRowSkeleton />;
   }
@@ -57,16 +63,22 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
   }
 
   return (
-    <section className="relative space-y-3.5 my-8">
+    <section
+      className="relative space-y-3.5 my-8"
+      role="region"
+      aria-label={title}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
       {/* Header Bar */}
       <div className="flex items-center justify-between px-1">
-        <h2 className="tracking-tight-title text-xl font-bold text-white md:text-2xl">
+        <h2 className="tracking-tight-title text-xl font-bold text-text-primary md:text-2xl">
           {title}
         </h2>
         {seeMoreLink && (
           <Link
             to={seeMoreLink}
-            className="group flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-amber-300 hover:text-amber-200 transition-colors"
+            className="group flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-accent hover:text-accent-light transition-colors min-h-[44px] px-2 py-2"
           >
             <span>Explore All</span>
             <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -74,50 +86,44 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
         )}
       </div>
 
-      {/* Rail Container with Soft Edge-Fade Mask */}
+      {/* Rail Container */}
       <div className="group/rail relative -mx-4 px-4 overflow-visible">
-        {/* Left Floating Chevron */}
+        {/* Left Floating Chevron (44x44 touch target, visible on touch & focus) */}
         {canScrollLeft && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+          <button
+            type="button"
             onClick={() => handleScroll('left')}
-            className="liquid-glass-control absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-xl opacity-0 group-hover/rail:opacity-100 transition-opacity focus-visible:opacity-100"
-            aria-label="Scroll left"
+            className="absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`Scroll ${title} left`}
           >
             <ChevronLeft size={22} />
-          </motion.button>
+          </button>
         )}
 
         {/* Scrollable Track */}
         <div
           ref={scrollRef}
-          className="rail-fade-mask hide-scrollbar flex items-start gap-4 overflow-x-auto overflow-y-visible py-4 scroll-smooth will-change-scroll"
+          className="rail-fade-mask hide-scrollbar flex items-start gap-4 overflow-x-auto overflow-y-visible py-4 pl-4 pr-12 scroll-smooth will-change-scroll"
         >
           {items.map((item) => (
-            <QuickPeekCard
+            <MovieCard
               key={`${item.id}-${'title' in item ? 'movie' : 'tv'}`}
               item={item}
               size="md"
-              isDimmed={activeHoveredId !== null && activeHoveredId !== item.id}
-              onHoverStateChange={(isHovered) => {
-                setActiveHoveredId(isHovered ? item.id : null);
-              }}
             />
           ))}
         </div>
 
-        {/* Right Floating Chevron */}
+        {/* Right Floating Chevron (44x44 touch target, visible on touch & focus) */}
         {canScrollRight && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+          <button
+            type="button"
             onClick={() => handleScroll('right')}
-            className="liquid-glass-control absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-xl opacity-0 group-hover/rail:opacity-100 transition-opacity focus-visible:opacity-100"
-            aria-label="Scroll right"
+            className="absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`Scroll ${title} right`}
           >
             <ChevronRight size={22} />
-          </motion.button>
+          </button>
         )}
       </div>
     </section>

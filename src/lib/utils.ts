@@ -23,8 +23,9 @@ export function formatDate(dateStr: string | null | undefined): string {
  * e.g. "2024-03-15" -> "2024"
  */
 export function getYear(dateStr: string | null | undefined): string {
-  if (!dateStr) return '';
-  return dateStr.split('-')[0] || '';
+  if (!dateStr) return '—';
+  const year = dateStr.split('-')[0];
+  return year && year.length === 4 ? year : '—';
 }
 
 /**
@@ -32,7 +33,7 @@ export function getYear(dateStr: string | null | undefined): string {
  * e.g. 142 -> "2h 22m"
  */
 export function formatRuntime(minutes: number | null | undefined): string {
-  if (!minutes) return '';
+  if (!minutes || minutes <= 0) return '—';
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h === 0) return `${m}m`;
@@ -45,7 +46,7 @@ export function formatRuntime(minutes: number | null | undefined): string {
  * e.g. 8.256 -> "8.3"
  */
 export function formatRating(rating: number | null | undefined): string {
-  if (rating === null || rating === undefined) return 'N/A';
+  if (rating === null || rating === undefined || rating <= 0) return '—';
   return rating.toFixed(1);
 }
 
@@ -53,6 +54,7 @@ export function formatRating(rating: number | null | undefined): string {
  * Truncate a string to a maximum length, adding ellipsis
  */
 export function truncate(str: string, maxLength: number): string {
+  if (!str) return '';
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength).trimEnd() + '...';
 }
@@ -72,13 +74,13 @@ export function getMediaDate(item: { release_date?: string; first_air_date?: str
 }
 
 /**
- * Determine if a media item is a movie or TV show
+ * Determine if a media item is a movie or TV show using explicit media_type
  */
 export function getMediaType(item: { media_type?: string; title?: string; name?: string }): 'movie' | 'tv' {
   if (item.media_type === 'tv') return 'tv';
   if (item.media_type === 'movie') return 'movie';
-  // Heuristic: movies have 'title', TV shows have 'name'
-  return 'title' in item && item.title ? 'movie' : 'tv';
+  if ('name' in item && item.name && !('title' in item && item.title)) return 'tv';
+  return 'movie';
 }
 
 /**

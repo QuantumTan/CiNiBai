@@ -51,14 +51,10 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   isMuted: false,
   isFullscreen: false,
   isPiP: false,
-  subtitlesEnabled: true,
-  selectedSubtitle: 'en',
-  activeChapter: 'Prologue',
-  chapters: [
-    { time: 0, title: 'Prologue' },
-    { time: 240, title: 'The Encounter' },
-    { time: 820, title: 'Ascension' },
-  ],
+  subtitlesEnabled: false,
+  selectedSubtitle: 'off',
+  activeChapter: '',
+  chapters: [],
   setTrack: (track) => set({ currentTrack: track }),
   setPlaying: (isPlaying) => set({ isPlaying }),
   setMiniPlayer: (isMiniPlayer) => set({ isMiniPlayer }),
@@ -69,11 +65,11 @@ export const usePlayerStore = create<PlayerState>((set) => ({
         state.chapters
           .slice()
           .reverse()
-          .find((c) => currentTime >= c.time)?.title || state.activeChapter;
+          .find((c) => currentTime >= c.time)?.title || '';
       return { currentTime, duration: d, activeChapter: chapter };
     }),
   setBuffered: (bufferedTime) => set({ bufferedTime }),
-  setVolume: (volume) => set({ volume }),
+  setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
   setMuted: (isMuted) => set({ isMuted }),
   setFullscreen: (isFullscreen) => set({ isFullscreen }),
   setPiP: (isPiP) => set({ isPiP }),

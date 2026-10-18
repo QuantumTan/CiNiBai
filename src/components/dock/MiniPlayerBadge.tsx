@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Play, Pause, Maximize2 } from 'lucide-react';
+import { Play, Pause, Maximize2, Film } from 'lucide-react';
 import { usePlayerStore } from '../../stores/player';
 import { springSnappy } from '../../lib/motion';
 
@@ -13,38 +13,53 @@ export function MiniPlayerBadge() {
     <motion.div
       layoutId="playerDeckContainer"
       transition={springSnappy}
-      className="apple-glass-heavy apple-glass-grain flex items-center gap-2.5 rounded-full p-1.5 pr-3 shadow-2xl"
+      className="apple-glass-heavy apple-glass-grain flex items-center gap-2.5 rounded-full p-1.5 pr-3 shadow-2xl border border-border-default"
+      role="region"
+      aria-label="Mini video player"
     >
-      {/* Thumbnail with Radial Progress Ring */}
-      <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full border border-white/20">
-        <img
-          src={currentTrack.poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=100'}
-          alt={currentTrack.title}
-          className="h-full w-full object-cover"
-        />
+      {/* Thumbnail with poster fallback */}
+      <div className="relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-poster-fallback">
+        {currentTrack.poster ? (
+          <img
+            src={currentTrack.poster}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-text-muted">
+            <Film size={16} aria-hidden="true" />
+          </div>
+        )}
       </div>
 
-      {/* Track Title */}
-      <div className="max-w-[90px] truncate text-[11px] font-semibold text-white">
+      {/* Track Title (text-xs minimum) */}
+      <div className="max-w-[110px] truncate text-xs font-semibold text-text-primary" title={currentTrack.title}>
         {currentTrack.title}
       </div>
 
-      {/* Mini Play / Pause */}
+      {/* Mini Play / Pause (44x44 touch target) */}
       <button
+        type="button"
         onClick={() => setPlaying(!isPlaying)}
-        className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black hover:bg-slate-200"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-on-accent hover:bg-accent-light active:scale-95 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         aria-label={isPlaying ? 'Pause' : 'Play'}
       >
-        {isPlaying ? <Pause size={11} className="fill-black" /> : <Play size={11} className="fill-black ml-0.5" />}
+        {isPlaying ? (
+          <Pause size={16} className="fill-current" aria-hidden="true" />
+        ) : (
+          <Play size={16} className="fill-current ml-0.5" aria-hidden="true" />
+        )}
       </button>
 
-      {/* Expand to Full Player */}
+      {/* Expand to Full Player (44x44 touch target) */}
       <button
+        type="button"
         onClick={() => setMiniPlayer(false)}
-        className="text-slate-400 hover:text-white"
-        aria-label="Expand player"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer transition-colors"
+        aria-label="Expand player to full size"
       >
-        <Maximize2 size={13} />
+        <Maximize2 size={16} aria-hidden="true" />
       </button>
     </motion.div>
   );

@@ -1,24 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 
 /**
- * Hook to check if a media query matches.
+ * Hook to check if a media query matches using useSyncExternalStore.
  * e.g. useMediaQuery('(min-width: 768px)') returns true on tablets and up.
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-    const handler = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-    mediaQuery.addEventListener('change', handler);
-    setMatches(mediaQuery.matches);
-
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, [query]);
-
-  return matches;
+  return useSyncExternalStore(
+    (callback) => {
+      if (typeof window === 'undefined') return () => {};
+      const mediaQuery = window.matchMedia(query);
+      mediaQuery.addEventListener('change', callback);
+      return () => mediaQuery.removeEventListener('change', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.matchMedia(query).matches : false),
+    () => false
+  );
 }

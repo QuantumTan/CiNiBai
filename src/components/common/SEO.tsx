@@ -37,6 +37,8 @@ export function SEO({
     setMetaTag('meta[name="description"]', 'name', 'description', description);
 
     // Open Graph Meta
+    setMetaTag('meta[property="og:site_name"]', 'property', 'og:site_name', 'CineBai');
+    setMetaTag('meta[property="og:locale"]', 'property', 'og:locale', 'en_US');
     setMetaTag('meta[property="og:title"]', 'property', 'og:title', formattedTitle);
     setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
     setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
@@ -46,9 +48,21 @@ export function SEO({
     }
 
     // Twitter Card Meta
+    setMetaTag('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
     setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', formattedTitle);
     setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', description);
     setMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', image);
+
+    // Canonical link
+    if (url) {
+      let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!canonicalEl) {
+        canonicalEl = document.createElement('link');
+        canonicalEl.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalEl);
+      }
+      canonicalEl.setAttribute('href', url);
+    }
 
     // Schema JSON-LD injection if provided
     let schemaScript: HTMLScriptElement | null = null;

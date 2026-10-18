@@ -1,22 +1,10 @@
-// CineBai design constants -- no emojis
+// CineBai design constants
 
 export const SITE_NAME = 'CineBai';
 export const SITE_DESCRIPTION = 'Watch your favorite movies and TV shows for free.';
 
 // TMDB
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
-
-// Colors
-export const COLORS = {
-  bgPrimary: '#0a0a0a',
-  bgSecondary: '#111111',
-  gold: '#c9a44c',
-  goldLight: '#e0c575',
-  goldDark: '#a88832',
-  textPrimary: '#f5f5f5',
-  textSecondary: '#a0a0a0',
-  textMuted: '#666666',
-} as const;
 
 // Breakpoints (matching Tailwind defaults)
 export const BREAKPOINTS = {

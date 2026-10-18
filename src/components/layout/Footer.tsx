@@ -4,23 +4,23 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-white/10 bg-[#060709]/80 backdrop-blur-md pb-28 md:pb-24 pt-8">
+    <footer className="border-t border-border-default bg-bg-surface/80 backdrop-blur-md py-8">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="flex flex-col items-center justify-between gap-4 md:flex-row text-xs text-slate-400">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row text-xs text-text-muted">
           <div className="flex items-center gap-2">
-            <span className="font-bold tracking-tight text-white text-base">
+            <span className="font-bold tracking-tight text-text-primary text-base font-display">
               {SITE_NAME}
             </span>
-            <span className="apple-glass-thin rounded-full px-2.5 py-0.5 text-[10px] uppercase font-semibold text-amber-300">
+            <span className="rounded-full bg-accent/20 border border-accent/40 px-2.5 py-0.5 text-xs font-semibold text-accent">
               Spatial Edition
             </span>
           </div>
 
-          <div className="flex items-center gap-6 text-slate-400">
+          <div className="flex items-center text-text-secondary text-center md:text-left">
             <span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span>
           </div>
 
-          <div className="text-slate-500 font-medium">
+          <div className="text-text-muted">
             &copy; {currentYear} {SITE_NAME}. All rights reserved.
           </div>
         </div>

@@ -1,20 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
-import { useAmbientCanvas } from '../context/AmbientCanvasContext';
+import { useAmbientStore } from '../stores/ambient';
+import type { RGBColor } from '../lib/color';
 
-const NETWORKS: Record<string, { name: string; id: string; color: string; bgHover: string }> = {
-  netflix: { name: 'Netflix', id: '8', color: 'text-[#E50914]', bgHover: 'hover:border-[#E50914]/50' },
-  prime: { name: 'Amazon Prime', id: '9|119', color: 'text-[#00A8E1]', bgHover: 'hover:border-[#00A8E1]/50' },
-  disney: { name: 'Disney+', id: '337', color: 'text-[#3070F7]', bgHover: 'hover:border-[#3070F7]/50' },
-  apple: { name: 'Apple TV+', id: '350', color: 'text-[#D1D5DB]', bgHover: 'hover:border-white/50' },
-  hulu: { name: 'Hulu', id: '15', color: 'text-[#1CE783]', bgHover: 'hover:border-[#1CE783]/50' },
-  hbo: { name: 'HBO Max', id: '1899|384', color: 'text-[#9900FF]', bgHover: 'hover:border-[#9900FF]/50' },
-  max: { name: 'Max', id: '1899|384', color: 'text-[#002BE7]', bgHover: 'hover:border-[#002BE7]/50' },
+interface NetworkConfig {
+  name: string;
+  id: string;
+  colorClass: string;
+  rgb: RGBColor;
+}
+
+const NETWORKS: Record<string, NetworkConfig> = {
+  netflix: { name: 'Netflix', id: '8', colorClass: 'text-[#E50914]', rgb: { r: 229, g: 9, b: 20 } },
+  prime: { name: 'Amazon Prime', id: '9|119', colorClass: 'text-[#00A8E1]', rgb: { r: 0, g: 168, b: 225 } },
+  disney: { name: 'Disney+', id: '337', colorClass: 'text-[#3070F7]', rgb: { r: 48, g: 112, b: 247 } },
+  apple: { name: 'Apple TV+', id: '350', colorClass: 'text-text-primary', rgb: { r: 200, g: 205, b: 215 } },
+  hulu: { name: 'Hulu', id: '15', colorClass: 'text-[#1CE783]', rgb: { r: 28, g: 231, b: 131 } },
+  hbo: { name: 'HBO Max', id: '1899|384', colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } },
+  max: { name: 'Max', id: '1899|384', colorClass: 'text-[#002BE7]', rgb: { r: 0, g: 43, b: 231 } },
 };
 
 // Date calculation for latest releases (last 18 months)
@@ -25,26 +34,17 @@ const defaultRecentDateStr = recentDate.toISOString().split('T')[0];
 export function NetworkPage() {
   const { network } = useParams<{ network: string }>();
   const networkData = network ? NETWORKS[network.toLowerCase()] : null;
-  const { setAmbientColor } = useAmbientCanvas();
+  const setSingleColor = useAmbientStore((s) => s.setSingleColor);
 
   const [mediaType, setMediaType] = useState<'tv' | 'movie'>('tv');
   const [sortOption, setSortOption] = useState<'latest_popular' | 'newest' | 'top_rated' | 'all_time'>('latest_popular');
 
   // Activate network signature atmospheric illumination
   useEffect(() => {
-    const networkColors: Record<string, { r: number; g: number; b: number }> = {
-      netflix: { r: 229, g: 9, b: 20 },
-      prime: { r: 0, g: 168, b: 225 },
-      disney: { r: 48, g: 112, b: 247 },
-      apple: { r: 200, g: 205, b: 215 },
-      hulu: { r: 28, g: 231, b: 131 },
-      hbo: { r: 153, g: 0, b: 255 },
-      max: { r: 0, g: 43, b: 231 },
-    };
-    if (network && networkColors[network.toLowerCase()]) {
-      setAmbientColor(networkColors[network.toLowerCase()]);
+    if (networkData) {
+      setSingleColor(networkData.rgb);
     }
-  }, [network, setAmbientColor]);
+  }, [networkData, setSingleColor]);
 
   // Compute query params based on selected filters
   const getQueryParams = () => {
@@ -63,7 +63,7 @@ export function NetworkPage() {
     } else if (sortOption === 'newest') {
       if (mediaType === 'tv') {
         baseParams.sort_by = 'first_air_date.desc';
-        baseParams['vote_count.gte'] = 5; // filter out unreleased / junk items
+        baseParams['vote_count.gte'] = 5;
       } else {
         baseParams.sort_by = 'primary_release_date.desc';
         baseParams['vote_count.gte'] = 10;
@@ -72,7 +72,6 @@ export function NetworkPage() {
       baseParams.sort_by = 'vote_average.desc';
       baseParams['vote_count.gte'] = 100;
     } else {
-      // all time
       baseParams.sort_by = 'popularity.desc';
     }
 
@@ -81,11 +80,11 @@ export function NetworkPage() {
 
   const queryParams = getQueryParams();
 
-  const tvQuery = useDiscoverTVShows(mediaType === 'tv' ? queryParams : { page: -1 });
-  const movieQuery = useDiscoverMovies(mediaType === 'movie' ? queryParams : { page: -1 });
+  const tvQuery = useDiscoverTVShows(mediaType === 'tv' && networkData ? queryParams : { page: -1 });
+  const movieQuery = useDiscoverMovies(mediaType === 'movie' && networkData ? queryParams : { page: -1 });
 
   const activeQuery = mediaType === 'tv' ? tvQuery : movieQuery;
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
+  const { data, isLoading, isError, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
 
   const allItems = (data?.pages?.flatMap((page: any) => page.results) || []) as Array<{
     id: number;
@@ -100,53 +99,89 @@ export function NetworkPage() {
 
   if (!networkData) {
     return (
-      <div className="pt-32 text-center text-white">
-        <h2 className="text-2xl font-bold">Platform Not Found</h2>
-        <p className="mt-2 text-text-muted">Please select a valid streaming provider.</p>
+      <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-24 text-center">
+        <SEO
+          title="Platform Not Found - CineBai"
+          description="The requested streaming platform could not be found on CineBai."
+        />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-error/10 text-error mb-4">
+          <AlertCircle size={32} aria-hidden="true" />
+        </div>
+        <h1 className="text-3xl font-bold font-display text-text-primary">Platform Not Found</h1>
+        <p className="mt-2 text-sm text-text-secondary max-w-md mx-auto">
+          We couldn't locate this network. Please select an available streaming provider from our catalog.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link to="/">
+            <Button variant="primary">Back to Home</Button>
+          </Link>
+          <Link to="/movies">
+            <Button variant="ghost">Browse Movies</Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-20 pb-36 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
       <SEO
         title={`${networkData.name} - Watch Movies & Shows Online`}
         description={`Stream the newest releases and top trending movies and TV series available on ${networkData.name} for free on CineBai.`}
       />
+
+      {/* Back Link */}
+      <div className="mb-4">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md py-1 px-1.5"
+          aria-label="Back to browse catalog"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Back to Browse</span>
+        </Link>
+      </div>
+
       {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between">
+      <div className="mb-8 flex flex-col gap-4 border-b border-border-subtle pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <span className={`text-4xl md:text-5xl font-black tracking-tight ${networkData.color}`}>
+            <h1 className={`text-4xl md:text-5xl font-bold font-display tracking-tight ${networkData.colorClass}`}>
               {networkData.name}
-            </span>
-            <span className="apple-glass-thin rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-300 shadow-md">
+            </h1>
+            <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent shadow-sm">
               Featured Studio
             </span>
           </div>
-          <p className="mt-2 text-sm md:text-base text-slate-300">
-            Browse the newest releases and premier titles available on {networkData.name}
+          <p className="mt-2 text-sm md:text-base text-text-secondary">
+            Browse premier releases and catalog titles available on {networkData.name}
           </p>
         </div>
 
         {/* Media Type Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-full apple-glass-thin">
+        <div role="tablist" aria-label="Media format" className="flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-border-default">
           <button
+            type="button"
+            role="tab"
+            aria-selected={mediaType === 'tv'}
             onClick={() => setMediaType('tv')}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+            className={`min-h-[44px] rounded-full px-4 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               mediaType === 'tv'
-                ? 'ios-active-lens text-white shadow-md'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-accent text-on-accent shadow-sm'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             TV Series
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={mediaType === 'movie'}
             onClick={() => setMediaType('movie')}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+            className={`min-h-[44px] rounded-full px-4 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               mediaType === 'movie'
-                ? 'ios-active-lens text-white shadow-md'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-accent text-on-accent shadow-sm'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             Movies
@@ -157,81 +192,120 @@ export function NetworkPage() {
       {/* Filter Controls Bar */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Sort By:</span>
-          <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Sort By:</span>
+          <div role="radiogroup" aria-label="Sort titles" className="flex flex-wrap gap-2">
             {[
               { id: 'latest_popular', label: 'Latest Hits' },
               { id: 'newest', label: 'Newest Released' },
               { id: 'top_rated', label: 'Top Rated' },
               { id: 'all_time', label: 'All-Time Popular' },
-            ].map((sort) => (
-              <button
-                key={sort.id}
-                onClick={() => setSortOption(sort.id as any)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  sortOption === sort.id
-                    ? 'ios-active-lens text-white shadow-md'
-                    : 'apple-glass-thin text-slate-300 hover:text-white'
-                }`}
-              >
-                {sort.label}
-              </button>
-            ))}
+            ].map((sort) => {
+              const isSelected = sortOption === sort.id;
+              return (
+                <button
+                  key={sort.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setSortOption(sort.id as any)}
+                  className={`min-h-[44px] rounded-full px-3.5 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    isSelected
+                      ? 'bg-accent text-on-accent shadow-sm'
+                      : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
+                  }`}
+                >
+                  {sort.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <span className="text-xs text-slate-400 font-medium">
-          Showing {allItems.length} titles
-        </span>
+        {allItems.length > 0 && !isLoading && (
+          <span className="text-xs text-text-muted font-medium">
+            Showing {allItems.length} titles
+          </span>
+        )}
       </div>
+
+      {/* Error State */}
+      {isError && (
+        <div
+          role="alert"
+          className="my-12 rounded-lg border border-error/30 bg-bg-surface p-8 text-center shadow-lg max-w-lg mx-auto"
+        >
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/20 text-error mb-4">
+            <AlertCircle size={24} aria-hidden="true" />
+          </div>
+          <h2 className="text-lg font-semibold text-text-primary">Unable to load studio titles</h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            {(error as Error)?.message || 'A network error occurred while querying titles.'}
+          </p>
+          <Button
+            variant="primary"
+            onClick={() => refetch()}
+            className="mt-6 inline-flex items-center gap-2"
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            <span>Try Again</span>
+          </Button>
+        </div>
+      )}
 
       {/* Results Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div
+          aria-busy="true"
+          className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+        >
+          <span className="sr-only">Loading {networkData.name} titles...</span>
           {Array.from({ length: 18 }).map((_, i) => (
             <div key={i} className="flex flex-col">
-              <Skeleton className="aspect-[2/3] w-full rounded-xl" />
-              <Skeleton className="mt-2 h-4 w-3/4" />
-              <Skeleton className="mt-1 h-3 w-1/2" />
+              <Skeleton className="aspect-[2/3] w-full rounded-lg" />
+              <Skeleton className="mt-2 h-4 w-3/4 rounded-md" />
+              <Skeleton className="mt-1 h-3 w-1/2 rounded-md" />
             </div>
           ))}
         </div>
-      ) : allItems.length === 0 ? (
+      ) : !isError && allItems.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-lg text-slate-300">No titles found for this filter combination.</p>
-          <button
+          <p className="text-base text-text-secondary">No titles found for this filter combination.</p>
+          <Button
+            variant="ghost"
             onClick={() => setSortOption('all_time')}
-            className="apple-glass-regular mt-4 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:border-amber-400/50 transition-all"
+            className="mt-4"
           >
             Show All-Time Titles
-          </button>
+          </Button>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {allItems.map((item) => (
-              <MovieCard
-                key={item.id}
-                item={{ ...item, media_type: mediaType } as any}
-                size="auto"
-              />
-            ))}
-          </div>
-
-          {/* Load More Button */}
-          {hasNextPage && (
-            <div className="mt-12 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="apple-glass-regular px-8 py-3 rounded-full text-sm font-semibold text-white hover:border-amber-400/50 transition-all"
-              >
-                {isFetchingNextPage ? 'Loading more...' : 'Load More Titles'}
-              </Button>
+        !isError && (
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {allItems.map((item) => (
+                <MovieCard
+                  key={item.id}
+                  item={{ ...item, media_type: mediaType } as any}
+                  size="auto"
+                />
+              ))}
             </div>
-          )}
-        </>
+
+            {/* Load More Button */}
+            {hasNextPage && (
+              <div className="mt-12 flex justify-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="min-h-[44px] px-8 py-3 rounded-md text-sm font-semibold"
+                >
+                  {isFetchingNextPage ? 'Loading more...' : 'Load More Titles'}
+                </Button>
+              </div>
+            )}
+          </>
+        )
       )}
     </div>
   );

@@ -120,3 +120,55 @@ export function clusterDominantOklab(
 
   return selected;
 }
+
+const colorCache = new Map<string, RGBColor[]>();
+
+/**
+ * Extract dominant colors from an image URL using canvas and OKLab clustering
+ */
+export async function extractDominantColors(
+  imageUrl: string,
+  k: number = 3
+): Promise<RGBColor[]> {
+  if (!imageUrl) {
+    return [
+      { r: 42, g: 32, b: 20 },
+      { r: 18, g: 26, b: 38 },
+      { r: 28, g: 16, b: 24 },
+    ];
+  }
+
+  if (colorCache.has(imageUrl)) {
+    return colorCache.get(imageUrl)!;
+  }
+
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = imageUrl;
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+    });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('Could not get canvas context');
+
+    canvas.width = 48;
+    canvas.height = 48;
+    ctx.drawImage(img, 0, 0, 48, 48);
+
+    const data = ctx.getImageData(0, 0, 48, 48).data;
+    const colors = clusterDominantOklab(data, k);
+    colorCache.set(imageUrl, colors);
+    return colors;
+  } catch {
+    return [
+      { r: 42, g: 32, b: 20 },
+      { r: 18, g: 26, b: 38 },
+      { r: 28, g: 16, b: 24 },
+    ];
+  }
+}
