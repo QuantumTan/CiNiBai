@@ -7,6 +7,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { useAmbientStore } from '../stores/ambient';
 import { getPosterUrl } from '../api/tmdb';
+import { trimQuery, filterOutPersons, formatResultCount } from '../lib/utils';
 
 const SUGGESTIONS = [
   'Interstellar',
@@ -21,7 +22,7 @@ const SUGGESTIONS = [
 
 export function SearchPage() {
   const [query, setQuery] = useState('');
-  const trimmedQuery = query.trim();
+  const trimmedQuery = trimQuery(query);
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
 
   const {
@@ -39,7 +40,7 @@ export function SearchPage() {
 
   // Flatten and exclude person results from both count and grid
   const rawResults = data?.pages?.flatMap((page) => page.results) || [];
-  const results = rawResults.filter((item) => item.media_type !== 'person');
+  const results = filterOutPersons(rawResults);
 
   const leadPoster = results[0]?.poster_path || trendingToday?.results?.[0]?.poster_path;
 
@@ -229,7 +230,7 @@ export function SearchPage() {
           <>
             <div className="mb-6 flex items-center justify-between">
               <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary" aria-live="polite">
-                {results.length.toLocaleString()} {results.length === 1 ? 'result' : 'results'}
+                {formatResultCount(results.length)}
               </p>
             </div>
 

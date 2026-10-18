@@ -123,6 +123,11 @@ Run static analysis and linting:
 npm run lint
 ```
 
+Execute unit test suite:
+```bash
+npm run test
+```
+
 Create an optimized production build:
 ```bash
 npm run build

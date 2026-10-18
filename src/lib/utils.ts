@@ -94,3 +94,58 @@ export function getMediaType(item: { media_type?: string }): 'movie' | 'tv' {
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
+
+/**
+ * Trim whitespace from a search query safely
+ */
+export function trimQuery(query: string | null | undefined): string {
+  return (query || '').trim();
+}
+
+/**
+ * Filter out person results from search hit arrays
+ */
+export function filterOutPersons<T extends { media_type?: string }>(
+  items: T[]
+): Exclude<T, { media_type: 'person' }>[] {
+  return items.filter(
+    (item): item is Exclude<T, { media_type: 'person' }> => item.media_type !== 'person'
+  );
+}
+
+/**
+ * Format search result count with pluralization and locale commas
+ */
+export function formatResultCount(count: number): string {
+  const safeCount = Math.max(0, count);
+  return `${safeCount.toLocaleString()} ${safeCount === 1 ? 'result' : 'results'}`;
+}
+
+/**
+ * Standard debounce wrapper with cancel handle
+ */
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const debounced = (...args: Parameters<T>) => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+    }, delay);
+  };
+
+  debounced.cancel = () => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  return debounced;
+}
