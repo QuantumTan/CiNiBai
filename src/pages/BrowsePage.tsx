@@ -70,12 +70,12 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
 
   const pageTitle =
     mediaType === 'movie'
-      ? 'Movies - Watch HD Movies Online'
-      : 'TV Shows - Watch Full Series Online';
+      ? 'Movies - Discover Premier Films'
+      : 'TV Shows - Discover Television Series';
   const pageDesc =
     mediaType === 'movie'
-      ? 'Browse and watch trending, top-rated, and newly released movies in HD for free on CineBai.'
-      : 'Discover and stream popular TV series, top-rated shows, and new episodes for free on CineBai.';
+      ? 'Browse and discover trending, top-rated, and newly released films with cast and ratings on CineBai.'
+      : 'Explore popular TV series, top-rated shows, and season guides on CineBai.';
 
   const displayedGenres =
     genres && !showAllGenres && genres.length > 8 ? genres.slice(0, 8) : genres || [];
@@ -102,8 +102,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
         <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm md:text-base text-text-secondary max-w-xl">
             Browse and discover{' '}
-            {mediaType === 'movie' ? 'the world’s greatest cinema' : 'critically acclaimed series'} in
-            HD streaming.
+            {mediaType === 'movie' ? 'the world’s greatest cinema' : 'critically acclaimed series'}.
           </p>
           {allItems.length > 0 && !isLoading && (
             <span className="text-xs font-medium text-text-secondary">

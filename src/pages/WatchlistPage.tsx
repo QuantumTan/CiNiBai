@@ -50,7 +50,7 @@ export function WatchlistPage() {
 
       <SEO
         title="My Watchlist - CineBai"
-        description="View and manage your saved movies and TV shows to watch later on CineBai."
+        description="View and manage your saved movies and TV shows to track what to watch next on CineBai."
       />
 
       {/* Back to Browse link */}

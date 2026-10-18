@@ -208,10 +208,10 @@ export function WatchPage() {
   return (
     <div className="flex min-h-screen flex-col bg-bg-base text-text-primary">
       <SEO
-        title={`Watch ${title || 'Streaming'} ${
+        title={`${title || 'Player'} ${
           mediaType === 'tv' ? `(S${season}:E${episode})` : ''
-        } Online Free`}
-        description={`Watch ${title} online in HD on CineBai.`}
+        } - Player View`}
+        description={`View episode and playback interface for ${title} on CineBai.`}
       />
 
       {/* Top Header Bar */}

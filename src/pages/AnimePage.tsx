@@ -58,8 +58,8 @@ export function AnimePage() {
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
       <SEO
-        title="Anime - Watch Free Japanese Anime Series & Movies"
-        description="Stream popular Japanese anime series, trending releases, and top-rated movies online for free in HD on CineBai."
+        title="Anime - Discover Japanese Animation Series & Films"
+        description="Explore popular Japanese anime series, trending releases, top-rated movies, and cast details on CineBai."
       />
 
       {/* Editorial Header */}

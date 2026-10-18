@@ -124,8 +124,8 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   return (
     <div className="relative">
       <SEO
-        title={`${title || 'Title'} ${year ? `(${year})` : ''} - Watch Free Online`}
-        description={overview || `Watch ${title} online in HD on CineBai.`}
+        title={`${title || 'Title'} ${year ? `(${year})` : ''} - Overview & Ratings`}
+        description={overview || `Explore ratings, cast, genres, and overview for ${title} on CineBai.`}
         image={posterSrc || undefined}
         type={mediaType === 'movie' ? 'video.movie' : 'video.tv_show'}
       />

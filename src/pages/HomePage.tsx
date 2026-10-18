@@ -36,12 +36,12 @@ export function HomePage() {
   return (
     <div className="relative overflow-hidden">
       <SEO
-        title="CineBai - Cinematic Streaming Experience"
-        description="Stream full movies, trending TV series, and anime in HD with dynamic ambient lighting on CineBai."
+        title="CineBai — Calm, cinema-first home for finding what to watch next"
+        description="A calm, cinema-first home for finding what to watch next. Discover trending movies, television series, anime, ratings, cast details, and curated watchlists on CineBai."
       />
 
       {/* Semantic H1 for the page */}
-      <h1 className="sr-only">CineBai — Stream Movies, TV Series & Anime</h1>
+      <h1 className="sr-only">CineBai — Discover Movies, TV Series & Anime</h1>
 
       {/* Cinematic Hero Showcase */}
       <CinematicHero items={heroItems} />

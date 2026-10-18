@@ -10,9 +10,9 @@ interface SEOProps {
 }
 
 export function SEO({
-  title = 'CineBai - Watch Free Movies & TV Shows Online in HD',
-  description = 'Watch full movies, TV series, anime, and trending streaming releases for free in HD on CineBai with fast servers and multiple playback options.',
-  image = 'https://cinibai.vercel.app/favicon.svg',
+  title = 'CineBai — Calm, cinema-first home for finding what to watch next',
+  description = 'CineBai is a calm, cinema-first home for finding what to watch next. Explore curated movies, television series, anime, ratings, cast details, and custom watchlists powered by TMDB.',
+  image = 'https://cinibai.vercel.app/og.jpg',
   url,
   type = 'website',
   schema,
@@ -33,6 +33,8 @@ export function SEO({
       element.setAttribute('content', content);
     };
 
+    const canonicalUrl = url || (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : 'https://cinibai.vercel.app/');
+
     // Standard Meta
     setMetaTag('meta[name="description"]', 'name', 'description', description);
 
@@ -43,9 +45,7 @@ export function SEO({
     setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
     setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
     setMetaTag('meta[property="og:type"]', 'property', 'og:type', type);
-    if (url) {
-      setMetaTag('meta[property="og:url"]', 'property', 'og:url', url);
-    }
+    setMetaTag('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
 
     // Twitter Card Meta
     setMetaTag('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
@@ -54,15 +54,13 @@ export function SEO({
     setMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', image);
 
     // Canonical link
-    if (url) {
-      let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-      if (!canonicalEl) {
-        canonicalEl = document.createElement('link');
-        canonicalEl.setAttribute('rel', 'canonical');
-        document.head.appendChild(canonicalEl);
-      }
-      canonicalEl.setAttribute('href', url);
+    let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
     }
+    canonicalEl.setAttribute('href', canonicalUrl);
 
     // Schema JSON-LD injection if provided
     let schemaScript: HTMLScriptElement | null = null;

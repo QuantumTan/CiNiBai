@@ -104,15 +104,15 @@ export function NetworkPage() {
     return (
       <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-24 text-center">
         <SEO
-          title="Platform Not Found - CineBai"
-          description="The requested streaming platform could not be found on CineBai."
+          title="Network Not Found - CineBai"
+          description="The requested studio network catalog could not be found on CineBai."
         />
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-error/10 text-error mb-4">
           <AlertCircle size={32} aria-hidden="true" />
         </div>
         <h1 className="text-3xl font-bold font-display text-text-primary">Platform Not Found</h1>
         <p className="mt-2 text-sm text-text-secondary max-w-md mx-auto">
-          We couldn't locate this network. Please select an available streaming provider from our catalog.
+          We couldn't locate this network. Please select an available studio provider from our catalog.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link to="/">
@@ -129,8 +129,8 @@ export function NetworkPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
       <SEO
-        title={`${networkData.name} - Watch Movies & Shows Online`}
-        description={`Stream the newest releases and top trending movies and TV series available on ${networkData.name} for free on CineBai.`}
+        title={`${networkData.name} - Browse Catalog Titles`}
+        description={`Explore the newest releases and catalog titles available on ${networkData.name} on CineBai.`}
       />
 
       {/* Back Link */}

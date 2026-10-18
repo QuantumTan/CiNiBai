@@ -58,7 +58,7 @@ export function SearchPage() {
             ? `Search: "${trimmedQuery}" - CineBai`
             : 'Search Movies, Series & Anime - CineBai'
         }
-        description="Search for movies, TV series, and anime to watch online in HD on CineBai."
+        description="Search for movies, TV series, and anime to find overviews, ratings, and cast details on CineBai."
       />
 
       <div className="mx-auto max-w-3xl text-center mb-8">
