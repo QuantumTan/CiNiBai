@@ -87,7 +87,7 @@ export function NetworkPage() {
   const movieQuery = useDiscoverMovies(queryParams, mediaType === 'movie' && !!networkData);
 
   const activeQuery = mediaType === 'tv' ? tvQuery : movieQuery;
-  const { data, isLoading, isError, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
+  const { data, isLoading, isError, isFetching, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = activeQuery;
 
   const allItems = (data?.pages?.flatMap((page: any) => page.results) || []) as Array<{
     id: number;
@@ -249,9 +249,10 @@ export function NetworkPage() {
           <Button
             variant="primary"
             onClick={() => refetch()}
+            disabled={isFetching}
             className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Try Again</span>
           </Button>
         </div>

@@ -36,7 +36,14 @@ export function SearchPage() {
     isFetchingNextPage,
   } = useInfiniteSearchMulti(trimmedQuery);
 
-  const { data: trendingToday, isLoading: trendingLoading } = useTrendingToday();
+  const {
+    data: trendingToday,
+    isLoading: trendingLoading,
+    isError: trendingTodayError,
+    isFetching: trendingTodayFetching,
+    error: trendingTodayErr,
+    refetch: refetchTrendingToday,
+  } = useTrendingToday();
 
   // Flatten and exclude person results from both count and grid
   const rawResults = data?.pages?.flatMap((page) => page.results) || [];
@@ -151,6 +158,32 @@ export function SearchPage() {
                     </div>
                   ))}
                 </div>
+              ) : trendingTodayError ? (
+                <div
+                  role="alert"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-error/30 bg-bg-surface/80 p-5 backdrop-blur-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error/15 text-error border border-error/20">
+                      <AlertCircle size={20} aria-hidden="true" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary">Unable to load trending titles</p>
+                      <p className="text-xs text-text-secondary mt-0.5">
+                        {getTMDBErrorMessage(trendingTodayErr)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => refetchTrendingToday()}
+                    disabled={trendingTodayFetching}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw size={14} className={trendingTodayFetching ? 'animate-spin' : ''} aria-hidden="true" />
+                    <span>Retry</span>
+                  </button>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {trendingToday?.results?.slice(0, 12).map((item) => (
@@ -198,9 +231,10 @@ export function SearchPage() {
             <Button
               variant="primary"
               onClick={() => refetch()}
+              disabled={isFetchingNextPage}
               className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
             >
-              <RefreshCw size={16} aria-hidden="true" />
+              <RefreshCw size={16} className={isFetchingNextPage ? 'animate-spin' : ''} aria-hidden="true" />
               <span>Retry Search</span>
             </Button>
           </div>

@@ -25,6 +25,7 @@ interface HomeRailProps {
   items?: (TMDBMovie | TMDBTVShow)[];
   isLoading: boolean;
   isError: boolean;
+  isFetching?: boolean;
   error: unknown;
   refetch: () => void;
   seeMoreLink?: string;
@@ -36,6 +37,7 @@ function HomeRail({
   items,
   isLoading,
   isError,
+  isFetching,
   error,
   refetch,
   seeMoreLink,
@@ -67,9 +69,10 @@ function HomeRail({
           <button
             type="button"
             onClick={() => refetch()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <RefreshCw size={14} aria-hidden="true" />
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Retry</span>
           </button>
         </div>
@@ -113,17 +116,17 @@ function HomeRail({
 }
 
 export function HomePage() {
-  const { data: trending, isLoading: trendingLoading, isError: trendingError, error: trendingErr, refetch: refetchTrending } = useTrending('all', 'week');
-  const { data: trendingToday, isLoading: trendingTodayLoading, isError: trendingTodayError, error: trendingTodayErr, refetch: refetchTrendingToday } = useTrendingToday();
-  const { data: popularMovies, isLoading: popularMoviesLoading, isError: popularMoviesError, error: popularMoviesErr, refetch: refetchPopularMovies } = usePopularMovies();
-  const { data: nowPlaying, isLoading: nowPlayingLoading, isError: nowPlayingError, error: nowPlayingErr, refetch: refetchNowPlaying } = useNowPlayingMovies();
-  const { data: netflix, isLoading: netflixLoading, isError: netflixError, error: netflixErr, refetch: refetchNetflix } = useNetflixOriginals();
-  const { data: prime, isLoading: primeLoading, isError: primeError, error: primeErr, refetch: refetchPrime } = usePrimeOriginals();
-  const { data: disney, isLoading: disneyLoading, isError: disneyError, error: disneyErr, refetch: refetchDisney } = useDisneyOriginals();
-  const { data: hbo, isLoading: hboLoading, isError: hboError, error: hboErr, refetch: refetchHbo } = useHBOMaxOriginals();
-  const { data: hulu, isLoading: huluLoading, isError: huluError, error: huluErr, refetch: refetchHulu } = useHuluOriginals();
-  const { data: apple, isLoading: appleLoading, isError: appleError, error: appleErr, refetch: refetchApple } = useAppleTVOriginals();
-  const { data: anime, isLoading: animeLoading, isError: animeError, error: animeErr, refetch: refetchAnime } = useAnime();
+  const { data: trending, isLoading: trendingLoading, isError: trendingError, isFetching: trendingFetching, error: trendingErr, refetch: refetchTrending } = useTrending('all', 'week');
+  const { data: trendingToday, isLoading: trendingTodayLoading, isError: trendingTodayError, isFetching: trendingTodayFetching, error: trendingTodayErr, refetch: refetchTrendingToday } = useTrendingToday();
+  const { data: popularMovies, isLoading: popularMoviesLoading, isError: popularMoviesError, isFetching: popularMoviesFetching, error: popularMoviesErr, refetch: refetchPopularMovies } = usePopularMovies();
+  const { data: nowPlaying, isLoading: nowPlayingLoading, isError: nowPlayingError, isFetching: nowPlayingFetching, error: nowPlayingErr, refetch: refetchNowPlaying } = useNowPlayingMovies();
+  const { data: netflix, isLoading: netflixLoading, isError: netflixError, isFetching: netflixFetching, error: netflixErr, refetch: refetchNetflix } = useNetflixOriginals();
+  const { data: prime, isLoading: primeLoading, isError: primeError, isFetching: primeFetching, error: primeErr, refetch: refetchPrime } = usePrimeOriginals();
+  const { data: disney, isLoading: disneyLoading, isError: disneyError, isFetching: disneyFetching, error: disneyErr, refetch: refetchDisney } = useDisneyOriginals();
+  const { data: hbo, isLoading: hboLoading, isError: hboError, isFetching: hboFetching, error: hboErr, refetch: refetchHbo } = useHBOMaxOriginals();
+  const { data: hulu, isLoading: huluLoading, isError: huluError, isFetching: huluFetching, error: huluErr, refetch: refetchHulu } = useHuluOriginals();
+  const { data: apple, isLoading: appleLoading, isError: appleError, isFetching: appleFetching, error: appleErr, refetch: refetchApple } = useAppleTVOriginals();
+  const { data: anime, isLoading: animeLoading, isError: animeError, isFetching: animeFetching, error: animeErr, refetch: refetchAnime } = useAnime();
 
   // Filter items with backdrops for the cinematic hero
   const heroItems = trending?.results.filter((item) => item.backdrop_path) || [];
@@ -159,9 +162,10 @@ export function HomePage() {
             <button
               type="button"
               onClick={() => refetchTrending()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              disabled={trendingFetching}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <RefreshCw size={15} aria-hidden="true" />
+              <RefreshCw size={15} className={trendingFetching ? 'animate-spin' : ''} aria-hidden="true" />
               <span>Retry</span>
             </button>
           </div>
@@ -240,6 +244,7 @@ export function HomePage() {
           items={trendingToday?.results}
           isLoading={trendingTodayLoading}
           isError={trendingTodayError}
+          isFetching={trendingTodayFetching}
           error={trendingTodayErr}
           refetch={refetchTrendingToday}
           isTop10
@@ -250,6 +255,7 @@ export function HomePage() {
           items={trending?.results}
           isLoading={trendingLoading}
           isError={trendingError}
+          isFetching={trendingFetching}
           error={trendingErr}
           refetch={refetchTrending}
           seeMoreLink="/movies"
@@ -260,6 +266,7 @@ export function HomePage() {
           items={apple?.results}
           isLoading={appleLoading}
           isError={appleError}
+          isFetching={appleFetching}
           error={appleErr}
           refetch={refetchApple}
           seeMoreLink="/network/apple"
@@ -270,6 +277,7 @@ export function HomePage() {
           items={netflix?.results}
           isLoading={netflixLoading}
           isError={netflixError}
+          isFetching={netflixFetching}
           error={netflixErr}
           refetch={refetchNetflix}
           seeMoreLink="/network/netflix"
@@ -280,6 +288,7 @@ export function HomePage() {
           items={hbo?.results}
           isLoading={hboLoading}
           isError={hboError}
+          isFetching={hboFetching}
           error={hboErr}
           refetch={refetchHbo}
           seeMoreLink="/network/hbo"
@@ -290,6 +299,7 @@ export function HomePage() {
           items={prime?.results}
           isLoading={primeLoading}
           isError={primeError}
+          isFetching={primeFetching}
           error={primeErr}
           refetch={refetchPrime}
           seeMoreLink="/network/prime"
@@ -300,6 +310,7 @@ export function HomePage() {
           items={disney?.results}
           isLoading={disneyLoading}
           isError={disneyError}
+          isFetching={disneyFetching}
           error={disneyErr}
           refetch={refetchDisney}
           seeMoreLink="/network/disney"
@@ -310,6 +321,7 @@ export function HomePage() {
           items={anime?.results}
           isLoading={animeLoading}
           isError={animeError}
+          isFetching={animeFetching}
           error={animeErr}
           refetch={refetchAnime}
           seeMoreLink="/anime"
@@ -320,6 +332,7 @@ export function HomePage() {
           items={hulu?.results}
           isLoading={huluLoading}
           isError={huluError}
+          isFetching={huluFetching}
           error={huluErr}
           refetch={refetchHulu}
           seeMoreLink="/network/hulu"
@@ -330,6 +343,7 @@ export function HomePage() {
           items={popularMovies?.results}
           isLoading={popularMoviesLoading}
           isError={popularMoviesError}
+          isFetching={popularMoviesFetching}
           error={popularMoviesErr}
           refetch={refetchPopularMovies}
           seeMoreLink="/movies"
@@ -340,6 +354,7 @@ export function HomePage() {
           items={nowPlaying?.results}
           isLoading={nowPlayingLoading}
           isError={nowPlayingError}
+          isFetching={nowPlayingFetching}
           error={nowPlayingErr}
           refetch={refetchNowPlaying}
           seeMoreLink="/movies"

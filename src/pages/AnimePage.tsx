@@ -16,6 +16,7 @@ export function AnimePage() {
     data,
     isLoading,
     isError,
+    isFetching,
     error,
     refetch,
     fetchNextPage,
@@ -131,9 +132,10 @@ export function AnimePage() {
           <Button
             variant="primary"
             onClick={() => refetch()}
+            disabled={isFetching}
             className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Try Again</span>
           </Button>
         </div>

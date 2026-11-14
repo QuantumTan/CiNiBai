@@ -32,12 +32,25 @@ export const WATCH_PROVIDER_IDS = {
 
 export function getTMDBErrorMessage(error: unknown): string {
   if (!error) return 'TMDB request failed';
-  const msg = error instanceof Error ? error.message : String(error);
+  let msg = '';
+  if (error instanceof Error) {
+    msg = error.message;
+  } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+    msg = (error as { message: string }).message;
+  } else {
+    msg = String(error);
+  }
+  msg = msg.trim();
+  if (!msg) return 'TMDB request failed';
+
   if (msg.includes('Missing TMDB token')) {
     return 'Missing TMDB token';
   }
+  if (msg.toLowerCase() === 'rate limited') {
+    return 'Rate limited';
+  }
   if (msg.toLowerCase().includes('rate limit')) {
-    return `Rate limited (${msg})`;
+    return `Rate limited: ${msg}`;
   }
   if (msg.startsWith('TMDB request failed')) {
     return msg;
@@ -45,23 +58,31 @@ export function getTMDBErrorMessage(error: unknown): string {
   return `TMDB request failed: ${msg}`;
 }
 
-const getHeaders = (): HeadersInit => ({
-  Authorization: `Bearer ${import.meta.env.VITE_TMDB_ACCESS_TOKEN}`,
+function getTMDBToken(): string | undefined {
+  if (typeof window !== 'undefined' && (window as unknown as { __TMDB_TOKEN__?: string }).__TMDB_TOKEN__) {
+    return (window as unknown as { __TMDB_TOKEN__?: string }).__TMDB_TOKEN__;
+  }
+  return import.meta.env.VITE_TMDB_ACCESS_TOKEN;
+}
+
+const getHeaders = (token: string): HeadersInit => ({
+  Authorization: `Bearer ${token}`,
   Accept: 'application/json',
 });
 
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T> {
-  const token = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
-  if (!token || token === 'undefined' || token.trim() === '') {
+  const rawToken = getTMDBToken();
+  if (!rawToken || rawToken === 'undefined' || rawToken === 'null' || rawToken.trim() === '') {
     throw new Error('Missing TMDB token');
   }
+  const token = rawToken.trim();
 
   const url = new URL(`${BASE_URL}${endpoint}`);
   Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, String(val)));
 
   let res: Response;
   try {
-    res = await fetch(url.toString(), { headers: getHeaders() });
+    res = await fetch(url.toString(), { headers: getHeaders(token) });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network error';
     throw new Error(`TMDB request failed: ${message}`);
@@ -72,10 +93,17 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
       const retryAfter = res.headers.get('Retry-After') || '1';
       throw new Error(`Rate limit exceeded. Retry after ${retryAfter}s`);
     }
-    throw new Error(`TMDB request failed: ${res.status} ${res.statusText}`.trim());
+    const statusText = res.statusText || (res.status === 404 ? 'Not Found' : res.status === 500 ? 'Internal Server Error' : res.status === 401 ? 'Unauthorized' : '');
+    const detail = statusText ? `${res.status} ${statusText}` : `${res.status}`;
+    throw new Error(`TMDB request failed: ${detail}`.trim());
   }
 
-  return res.json();
+  try {
+    return await res.json();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid JSON';
+    throw new Error(`TMDB request failed: ${message}`);
+  }
 }
 
 // --- Image URL helpers ---

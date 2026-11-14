@@ -32,16 +32,23 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   const activeQuery = mediaType === 'movie' ? movieQuery : tvQuery;
   const isLoading = activeQuery.isLoading;
   const isError = activeQuery.isError;
+  const isFetching = activeQuery.isFetching;
   const error = activeQuery.error;
   const movie = movieQuery.data;
   const tv = tvQuery.data;
-  const refetch = () => activeQuery.refetch();
 
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const { data: seasonData } = useTVSeasonDetails(
+  const { data: seasonData, refetch: refetchSeason } = useTVSeasonDetails(
     mediaType === 'tv' ? numericId : 0,
     selectedSeason
   );
+
+  const refetch = () => {
+    activeQuery.refetch();
+    if (mediaType === 'tv') {
+      refetchSeason();
+    }
+  };
 
   const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
 
@@ -104,15 +111,16 @@ export function DetailPage({ mediaType }: DetailPageProps) {
             Couldn't load this title
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-            {getTMDBErrorMessage(error)}
+            {getTMDBErrorMessage(error || 'TMDB request failed: Title not found')}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Button
               variant="primary"
               onClick={() => refetch()}
+              disabled={isFetching}
               className="inline-flex items-center gap-2 min-h-[44px] px-5"
             >
-              <RefreshCw size={16} aria-hidden="true" />
+              <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} aria-hidden="true" />
               <span>Try Again</span>
             </Button>
             <Link

@@ -206,9 +206,10 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           <Button
             variant="primary"
             onClick={() => query.refetch()}
+            disabled={query.isFetching}
             className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <RefreshCw size={16} className={query.isFetching ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Try Again</span>
           </Button>
         </div>
