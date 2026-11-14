@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Plus, Check, Film } from 'lucide-react';
-import { getPosterUrl } from '../../api/tmdb';
+import { getPosterUrl, getPosterSrcSet } from '../../api/tmdb';
 import { getMediaTitle, getMediaDate, getYear, getMediaType, formatRating } from '../../lib/utils';
 import { useWatchlistStore } from '../../stores/watchlistStore';
 
@@ -23,6 +23,7 @@ export interface MovieCardProps {
 }
 
 export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProps) {
+  const [imageError, setImageError] = useState(false);
   const type = getMediaType(item);
   const title = getMediaTitle(item);
   const year = getYear(getMediaDate(item));
@@ -32,7 +33,9 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
   const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
   const inWatchlist = isInWatchlist(item.id, type);
 
-  const posterUrl = getPosterUrl(item.poster_path, 'w342');
+  const hasPoster = Boolean(item.poster_path && typeof item.poster_path === 'string' && !item.poster_path.includes('undefined'));
+  const posterUrl = hasPoster ? getPosterUrl(item.poster_path, 'w342') : null;
+  const posterSrcSet = hasPoster ? getPosterSrcSet(item.poster_path) : undefined;
 
   const handleWatchlistClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -67,22 +70,21 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
       {/* Primary Card Anchor */}
       <Link
         to={`/${type}/${item.id}`}
-        className="block w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+        className="block w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-lg"
         aria-label={`${title} (${type === 'tv' ? 'Series' : 'Movie'}, ${year})`}
       >
         {/* Poster Media Container */}
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-poster-fallback border border-border-default shadow-md group-hover:border-border-strong group-hover:shadow-lg transition-[border-color,box-shadow] duration-200">
-          {posterUrl ? (
+          {posterUrl && !imageError ? (
             <img
               src={posterUrl}
+              srcSet={posterSrcSet}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
               alt={title}
               loading="lazy"
               decoding="async"
               className="absolute inset-0 h-full w-full object-cover"
-              onError={(e) => {
-                // Graceful fallback on broken image
-                (e.currentTarget as HTMLElement).style.display = 'none';
-              }}
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="absolute inset-0 flex h-full w-full flex-col items-center justify-center p-3 text-center bg-poster-fallback text-text-secondary">
@@ -128,7 +130,7 @@ export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProp
         onClick={handleWatchlistClick}
         aria-pressed={inWatchlist}
         aria-label={inWatchlist ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
-        className={`absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-border-default backdrop-blur-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:scale-[0.96] ${
+        className={`absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-border-default backdrop-blur-md transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.96] ${
           inWatchlist
             ? 'bg-accent text-on-accent border-accent shadow-md'
             : 'bg-black/60 text-text-primary hover:bg-black/80 hover:border-border-strong'

@@ -96,6 +96,20 @@ function DetailPageContent({ mediaType, numericId }: { mediaType: 'movie' | 'tv'
   const shareTimeoutRef = useRef<number | null>(null);
   const trailerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 768px)').matches;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
   const recordView = useRecentlyViewedStore((s) => s.recordView);
@@ -305,7 +319,9 @@ function DetailPageContent({ mediaType, numericId }: { mediaType: 'movie' | 'tv'
   const director = credits?.crew.find((c) => c.job === 'Director');
 
   const posterSrc = poster ? getPosterUrl(poster, 'w500') : null;
-  const backdropSrc = backdrop ? getBackdropUrl(backdrop, 'w1280') : null;
+  const backdropSrc1280 = backdrop ? getBackdropUrl(backdrop, 'w1280') : null;
+  const backdropSrc780 = backdrop ? getBackdropUrl(backdrop, 'w780') : null;
+  const backdropSrc = backdropSrc1280;
 
   const regionProviders = watchProvidersQuery.data?.results?.[REGION];
   const sortAndDedupeProviders = (list?: TMDBWatchProvider[]) => {
@@ -334,19 +350,41 @@ function DetailPageContent({ mediaType, numericId }: { mediaType: 'movie' | 'tv'
         description={overview || `Explore ratings, cast, genres, and overview for ${title} on CineBai.`}
         image={posterSrc || undefined}
         type={mediaType === 'movie' ? 'video.movie' : 'video.tv_show'}
+        url={`https://cinibai.vercel.app/${mediaType}/${numericId}`}
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': mediaType === 'movie' ? 'Movie' : 'TVSeries',
+          name: title,
+          description: overview,
+          image: posterSrc || backdropSrc1280 || undefined,
+          datePublished: year !== '—' ? year : undefined,
+          aggregateRating: rating > 0 ? {
+            '@type': 'AggregateRating',
+            ratingValue: rating,
+            bestRating: 10,
+            worstRating: 1,
+            ratingCount: (mediaType === 'movie' ? movie?.vote_count : tv?.vote_count) || 1,
+          } : undefined,
+        }}
       />
 
       {/* Backdrop Scrim Header: aspect-video on mobile, widescreen on desktop, object-cover with scrim */}
       <div className="relative w-full aspect-video md:aspect-[21/9] max-h-[560px] bg-bg-surface overflow-hidden">
-        {backdropSrc ? (
-          <img
-            src={backdropSrc}
-            alt=""
-            aria-hidden="true"
-            fetchPriority="high"
-            decoding="async"
-            className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
-          />
+        {backdrop ? (
+          <picture className="absolute inset-0 h-full w-full">
+            <source media="(min-width: 768px)" srcSet={backdropSrc1280 || undefined} />
+            <source media="(max-width: 767px)" srcSet={backdropSrc780 || undefined} />
+            <img
+              src={isDesktop ? backdropSrc1280 || undefined : backdropSrc780 || undefined}
+              srcSet={backdropSrc780 && backdropSrc1280 ? `${backdropSrc780} 780w, ${backdropSrc1280} 1280w` : undefined}
+              sizes="100vw"
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
+            />
+          </picture>
         ) : (
           <div className="absolute inset-0 h-full w-full bg-bg-surface" />
         )}

@@ -64,12 +64,12 @@ export function ScrollContainer({
       onKeyDown={handleKeyDown}
       {...rest}
     >
-      {/* Left Arrow (44x44 touch target, visible on touch and focus) */}
+      {/* Left Arrow (44x44 touch target, visible on hover, focus-visible, and container focus-within) */}
       {canScrollLeft && (
         <button
           type="button"
           onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 z-20 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="absolute left-0 top-1/2 z-20 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           aria-label="Scroll left"
         >
           <ChevronLeft size={22} />
@@ -87,12 +87,12 @@ export function ScrollContainer({
         {children}
       </div>
 
-      {/* Right Arrow (44x44 touch target, visible on touch and focus) */}
+      {/* Right Arrow (44x44 touch target, visible on hover, focus-visible, and container focus-within) */}
       {canScrollRight && (
         <button
           type="button"
           onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 z-20 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="absolute right-0 top-1/2 z-20 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           aria-label="Scroll right"
         >
           <ChevronRight size={22} />

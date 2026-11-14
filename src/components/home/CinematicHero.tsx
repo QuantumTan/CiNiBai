@@ -17,6 +17,20 @@ export function CinematicHero({ items }: CinematicHeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isHoveredOrFocused, setIsHoveredOrFocused] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 768px)').matches;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
   const navigate = useNavigate();
 
   const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
@@ -59,7 +73,8 @@ export function CinematicHero({ items }: CinematicHeroProps) {
   const rawRating = currentItem.vote_average ?? 0;
   const ratingText = formatRating(rawRating);
   const inWatchlist = isInWatchlist(currentItem.id, type);
-  const backdropUrl = getBackdropUrl(currentItem.backdrop_path, 'w1280');
+  const backdropUrl780 = getBackdropUrl(currentItem.backdrop_path, 'w780');
+  const backdropUrl1280 = getBackdropUrl(currentItem.backdrop_path, 'w1280');
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -88,7 +103,7 @@ export function CinematicHero({ items }: CinematicHeroProps) {
 
   return (
     <section
-      className="relative h-[50vh] sm:h-[54vh] min-h-[380px] max-h-[480px] w-full overflow-hidden bg-bg-base"
+      className="relative h-[50vh] min-h-[380px] max-h-[480px] w-full overflow-hidden bg-bg-base"
       aria-label="Featured Showcase"
       onMouseEnter={() => setIsHoveredOrFocused(true)}
       onMouseLeave={() => setIsHoveredOrFocused(false)}
@@ -107,15 +122,21 @@ export function CinematicHero({ items }: CinematicHeroProps) {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="absolute inset-0"
         >
-          {backdropUrl && (
-            <img
-              src={backdropUrl}
-              alt=""
-              aria-hidden="true"
-              fetchPriority="high"
-              decoding="async"
-              className="h-full w-full object-cover object-center"
-            />
+          {currentItem.backdrop_path && (
+            <picture className="h-full w-full">
+              <source media="(min-width: 768px)" srcSet={backdropUrl1280} />
+              <source media="(max-width: 767px)" srcSet={backdropUrl780} />
+              <img
+                src={isDesktop ? backdropUrl1280 : backdropUrl780}
+                srcSet={`${backdropUrl780} 780w, ${backdropUrl1280} 1280w`}
+                sizes="100vw"
+                alt=""
+                aria-hidden="true"
+                fetchPriority="high"
+                decoding="async"
+                className="h-full w-full object-cover object-center"
+              />
+            </picture>
           )}
 
           {/* Dual Left-to-Right + Bottom Scrim */}

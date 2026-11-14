@@ -51,6 +51,14 @@ export function WatchlistPage() {
       <SEO
         title="My Watchlist - CineBai"
         description="View and manage your saved movies and TV shows to track what to watch next on CineBai."
+        url="https://cinibai.vercel.app/watchlist"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'My Watchlist - CineBai',
+          description: 'View and manage your saved movies and TV shows on CineBai.',
+          url: 'https://cinibai.vercel.app/watchlist',
+        }}
       />
 
       {/* Back to Browse link */}

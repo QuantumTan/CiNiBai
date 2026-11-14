@@ -121,12 +121,12 @@ export function LiquidMediaRail({
 
       {/* Rail Container */}
       <div className="group/rail relative -mx-4 px-4 overflow-visible">
-        {/* Left Floating Chevron (44x44 touch target, visible on touch & focus) */}
+        {/* Left Floating Chevron (44x44 touch target, visible on hover, focus-visible, and rail focus-within) */}
         {canScrollLeft && (
           <button
             type="button"
             onClick={() => handleScroll('left')}
-            className="absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             aria-label={`Scroll ${title} left`}
           >
             <ChevronLeft size={22} />
@@ -147,12 +147,12 @@ export function LiquidMediaRail({
           ))}
         </div>
 
-        {/* Right Floating Chevron (44x44 touch target, visible on touch & focus) */}
+        {/* Right Floating Chevron (44x44 touch target, visible on hover, focus-visible, and rail focus-within) */}
         {canScrollRight && (
           <button
             type="button"
             onClick={() => handleScroll('right')}
-            className="absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             aria-label={`Scroll ${title} right`}
           >
             <ChevronRight size={22} />

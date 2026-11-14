@@ -44,6 +44,8 @@ export function SEO({
     setMetaTag('meta[property="og:title"]', 'property', 'og:title', formattedTitle);
     setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
     setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
+    setMetaTag('meta[property="og:image:width"]', 'property', 'og:image:width', '1200');
+    setMetaTag('meta[property="og:image:height"]', 'property', 'og:image:height', '630');
     setMetaTag('meta[property="og:type"]', 'property', 'og:type', type);
     setMetaTag('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
 

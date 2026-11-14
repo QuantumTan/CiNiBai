@@ -106,6 +106,13 @@ export function NetworkPage() {
         <SEO
           title="Network Not Found - CineBai"
           description="The requested studio network catalog could not be found on CineBai."
+          url="https://cinibai.vercel.app/networks"
+          schema={{
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'Network Not Found - CineBai',
+            url: 'https://cinibai.vercel.app/networks',
+          }}
         />
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-error/10 text-error mb-4">
           <AlertCircle size={32} aria-hidden="true" />
@@ -131,6 +138,14 @@ export function NetworkPage() {
       <SEO
         title={`${networkData.name} - Browse Catalog Titles`}
         description={`Explore the newest releases and catalog titles available on ${networkData.name} on CineBai.`}
+        url={`https://cinibai.vercel.app/networks/${network}`}
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `${networkData.name} - Catalog Titles`,
+          description: `Explore the newest releases and catalog titles available on ${networkData.name} on CineBai.`,
+          url: `https://cinibai.vercel.app/networks/${network}`,
+        }}
       />
 
       {/* Back Link */}

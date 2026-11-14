@@ -175,6 +175,14 @@ export function SearchPage() {
             : 'Search Movies, Series & Anime - CineBai'
         }
         description="Search for movies, TV series, and anime to find overviews, ratings, and cast details on CineBai."
+        url={trimmedQuery ? `https://cinibai.vercel.app/search?q=${encodeURIComponent(trimmedQuery)}` : 'https://cinibai.vercel.app/search'}
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'SearchResultsPage',
+          name: trimmedQuery ? `Search results for "${trimmedQuery}" - CineBai` : 'Search Movies, Series & Anime - CineBai',
+          description: 'Search for movies, TV series, and anime on CineBai.',
+          url: trimmedQuery ? `https://cinibai.vercel.app/search?q=${encodeURIComponent(trimmedQuery)}` : 'https://cinibai.vercel.app/search',
+        }}
       />
 
       <div className="mx-auto max-w-3xl text-center mb-8">

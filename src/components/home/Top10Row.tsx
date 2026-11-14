@@ -2,18 +2,22 @@ import { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Star, TrendingUp, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '../ui/Skeleton';
-import { getPosterUrl } from '../../api/tmdb';
+import { getPosterUrl, getPosterSrcSet } from '../../api/tmdb';
 import { getMediaDate, getYear, getMediaTitle, getMediaType, formatRating } from '../../lib/utils';
 import type { TMDBMediaItem } from '../../api/tmdb.types';
 
-function Top10Poster({ posterUrl, title }: { posterUrl: string; title: string }) {
+function Top10Poster({ posterPath, title }: { posterPath?: string | null; title: string }) {
   const [hasError, setHasError] = useState(false);
-  const [prevPosterUrl, setPrevPosterUrl] = useState(posterUrl);
+  const [prevPosterPath, setPrevPosterPath] = useState(posterPath);
 
-  if (prevPosterUrl !== posterUrl) {
-    setPrevPosterUrl(posterUrl);
+  if (prevPosterPath !== posterPath) {
+    setPrevPosterPath(posterPath);
     setHasError(false);
   }
+
+  const hasPoster = Boolean(posterPath && typeof posterPath === 'string' && !posterPath.includes('undefined'));
+  const posterUrl = hasPoster ? getPosterUrl(posterPath, 'w342') : null;
+  const posterSrcSet = hasPoster ? getPosterSrcSet(posterPath) : undefined;
 
   if (!posterUrl || hasError) {
     return (
@@ -27,6 +31,8 @@ function Top10Poster({ posterUrl, title }: { posterUrl: string; title: string })
   return (
     <img
       src={posterUrl}
+      srcSet={posterSrcSet}
+      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
       alt={title}
       className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover/top10:scale-105"
       loading="lazy"
@@ -115,12 +121,12 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
 
       {/* Rail Container */}
       <div className="group/rail relative -mx-4 px-4 overflow-visible">
-        {/* Left Floating Chevron (44x44, visible on touch/focus) */}
+        {/* Left Floating Chevron (44x44 touch target, visible on hover, focus-visible, and rail focus-within) */}
         {canScrollLeft && (
           <button
             type="button"
             onClick={() => handleScroll('left')}
-            className="absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute left-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             aria-label="Scroll top 10 left"
           >
             <ChevronLeft size={22} />
@@ -146,13 +152,12 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                 const itemTitle = getMediaTitle(item);
                 const releaseYear = getYear(getMediaDate(item));
                 const rating = item.vote_average ?? 0;
-                const posterUrl = getPosterUrl(item.poster_path, 'w342');
 
                 return (
                   <Link
                     key={item.id}
                     to={`/${mediaType}/${item.id}`}
-                    className="group/top10 relative flex-shrink-0 flex flex-col items-start select-none transition-transform duration-200 hover:-translate-y-1 pr-2 sm:pr-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="group/top10 relative flex-shrink-0 flex flex-col items-start select-none transition-transform duration-200 hover:-translate-y-1 pr-2 sm:pr-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     title={itemTitle}
                   >
                     <div className="relative flex items-center">
@@ -168,7 +173,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
 
                       {/* Overlapping Poster Card */}
                       <div className="relative z-10 -ml-7 sm:-ml-9 md:-ml-12 w-32 sm:w-36 md:w-44 aspect-[2/3] overflow-hidden rounded-lg bg-poster-fallback border border-border-default shadow-xl flex-shrink-0 group-hover/top10:border-border-strong transition-colors">
-                        <Top10Poster posterUrl={posterUrl} title={itemTitle} />
+                        <Top10Poster posterPath={item.poster_path} title={itemTitle} />
 
                         {/* Rating Pill */}
                         {rating > 0 && (
@@ -209,12 +214,12 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
               })}
         </div>
 
-        {/* Right Floating Chevron (44x44, visible on touch/focus) */}
+        {/* Right Floating Chevron (44x44 touch target, visible on hover, focus-visible, and rail focus-within) */}
         {canScrollRight && (
           <button
             type="button"
             onClick={() => handleScroll('right')}
-            className="absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-90 sm:opacity-0 sm:group-hover/rail:opacity-100 sm:focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute right-2 top-1/2 z-30 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 border border-border-default text-text-primary shadow-xl opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-black/90 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             aria-label="Scroll top 10 right"
           >
             <ChevronRight size={22} />

@@ -61,6 +61,14 @@ export function AnimePage() {
       <SEO
         title="Anime - Discover Japanese Animation Series & Films"
         description="Explore popular Japanese anime series, trending releases, top-rated movies, and cast details on CineBai."
+        url="https://cinibai.vercel.app/anime"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'Anime - Japanese Animation Series & Films',
+          description: 'Explore popular Japanese anime series, trending releases, top-rated movies, and cast details on CineBai.',
+          url: 'https://cinibai.vercel.app/anime',
+        }}
       />
 
       {/* Editorial Header */}

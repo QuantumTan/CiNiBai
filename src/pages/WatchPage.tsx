@@ -474,6 +474,14 @@ export function WatchPage() {
           mediaType === 'tv' ? `(S${season}:E${episode})` : ''
         } - Player View`}
         description={`View episode and playback interface for ${title} on CineBai.`}
+        url={`https://cinibai.vercel.app/watch/${mediaType}/${numericId}${mediaType === 'tv' ? `?s=${season}&e=${episode}` : ''}`}
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': mediaType === 'movie' ? 'Movie' : 'TVSeries',
+          name: title,
+          description: `Playback interface for ${title} on CineBai.`,
+          url: `https://cinibai.vercel.app/watch/${mediaType}/${numericId}${mediaType === 'tv' ? `?s=${season}&e=${episode}` : ''}`,
+        }}
       />
 
       {/* Top Header Bar */}

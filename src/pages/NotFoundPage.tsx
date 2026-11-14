@@ -9,6 +9,14 @@ export function NotFoundPage() {
       <SEO
         title="Page Not Found - CineBai"
         description="The page you are looking for does not exist on CineBai."
+        url="https://cinibai.vercel.app/404"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Page Not Found - CineBai',
+          description: 'The page you are looking for does not exist on CineBai.',
+          url: 'https://cinibai.vercel.app/404',
+        }}
       />
 
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/20 border border-accent/40 text-accent mb-6">

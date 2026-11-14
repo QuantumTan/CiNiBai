@@ -144,7 +144,18 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
-      <SEO title={pageTitle} description={pageDesc} />
+      <SEO
+        title={pageTitle}
+        description={pageDesc}
+        url={`https://cinibai.vercel.app/${mediaType === 'movie' ? 'movies' : 'tv'}`}
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: pageTitle,
+          description: pageDesc,
+          url: `https://cinibai.vercel.app/${mediaType === 'movie' ? 'movies' : 'tv'}`,
+        }}
+      />
 
       {/* Editorial Header */}
       <div className="mb-8">

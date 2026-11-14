@@ -16,10 +16,13 @@ export function Squircle({
   className = '',
   style = {},
   children,
+  onFocus,
+  onBlur,
   ...props
 }: SquircleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [clipPath, setClipPath] = useState<string>('');
+  const [isFocused, setIsFocused] = useState(false);
   const caps = getCapabilities();
 
   useEffect(() => {
@@ -43,6 +46,7 @@ export function Squircle({
     return () => observer.disconnect();
   }, [radius, smoothing, caps.supportsCornerShape]);
 
+  // When focused/focus-within, avoid CSS clipPath which clips outline-offset
   const squircleStyle: React.CSSProperties = {
     ...style,
     ...(caps.supportsCornerShape
@@ -51,7 +55,7 @@ export function Squircle({
           // @ts-ignore -- Experimental CSS property
           cornerShape: 'squircle',
         }
-      : clipPath
+      : clipPath && !isFocused
       ? {
           clipPath,
         }
@@ -65,6 +69,14 @@ export function Squircle({
       ref={containerRef}
       className={`relative ${className}`}
       style={squircleStyle}
+      onFocus={(e: React.FocusEvent<HTMLDivElement>) => {
+        setIsFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
+        setIsFocused(false);
+        onBlur?.(e);
+      }}
       {...props}
     >
       {children}

@@ -210,6 +210,19 @@ export function HomePage() {
       <SEO
         title="CineBai — Calm, cinema-first home for finding what to watch next"
         description="A calm, cinema-first home for finding what to watch next. Discover trending movies, television series, anime, ratings, cast details, and curated watchlists on CineBai."
+        url="https://cinibai.vercel.app/"
+        schema={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'CineBai',
+          url: 'https://cinibai.vercel.app/',
+          description: 'A calm, cinema-first home for finding what to watch next.',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: 'https://cinibai.vercel.app/search?q={search_term_string}',
+            'query-input': 'required name=search_term_string',
+          },
+        }}
       />
 
       {/* Semantic H1 for the page */}
