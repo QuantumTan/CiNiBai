@@ -140,13 +140,13 @@ export function CinematicHero({ items }: CinematicHeroProps) {
             </picture>
           )}
 
-          {/* Dual Left-to-Right + Bottom Scrim */}
+          {/* Seamless Multi-directional Scrim: Left-to-Right, Bottom-to-Top, and Top-to-Bottom */}
           <div
             aria-hidden="true"
             className="absolute inset-0 pointer-events-none"
             style={{
               backgroundImage:
-                'linear-gradient(to right, rgba(8, 8, 10, 0.92), rgba(8, 8, 10, 0.55) 55%, transparent), linear-gradient(to top, rgba(8, 8, 10, 0.95), transparent 45%)',
+                'linear-gradient(to right, rgba(8, 8, 10, 0.95), rgba(8, 8, 10, 0.6) 55%, transparent), linear-gradient(to top, rgba(8, 8, 10, 0.95) 0%, transparent 45%), linear-gradient(to bottom, rgba(8, 8, 10, 0.85) 0%, rgba(8, 8, 10, 0.35) 20%, transparent 40%)',
             }}
           />
         </motion.div>

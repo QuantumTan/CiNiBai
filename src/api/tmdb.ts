@@ -53,11 +53,43 @@ export function getTMDBErrorMessage(error: unknown): string {
   return `TMDB request failed: ${msg}`;
 }
 
-function getTMDBToken(): string | undefined {
-  if (typeof window !== 'undefined' && (window as unknown as { __TMDB_TOKEN__?: string }).__TMDB_TOKEN__) {
-    return (window as unknown as { __TMDB_TOKEN__?: string }).__TMDB_TOKEN__;
+export function getTMDBToken(): string | undefined {
+  if (typeof window !== 'undefined') {
+    const win = window as unknown as { __TMDB_TOKEN__?: string };
+    if (win.__TMDB_TOKEN__ && win.__TMDB_TOKEN__.trim() !== '') {
+      return win.__TMDB_TOKEN__.trim();
+    }
+    try {
+      const stored = localStorage.getItem('tmdb_access_token') || localStorage.getItem('VITE_TMDB_ACCESS_TOKEN');
+      if (stored && stored.trim() !== '') {
+        return stored.trim();
+      }
+    } catch {
+      // Ignore localStorage access restrictions
+    }
   }
   return import.meta.env.VITE_TMDB_ACCESS_TOKEN;
+}
+
+export function setTMDBToken(token: string): void {
+  const trimmed = token.trim();
+  if (typeof window !== 'undefined') {
+    (window as unknown as { __TMDB_TOKEN__?: string }).__TMDB_TOKEN__ = trimmed;
+    try {
+      if (trimmed) {
+        localStorage.setItem('tmdb_access_token', trimmed);
+      } else {
+        localStorage.removeItem('tmdb_access_token');
+      }
+    } catch {
+      // Ignore localStorage access restrictions
+    }
+  }
+}
+
+export function hasTMDBToken(): boolean {
+  const token = getTMDBToken();
+  return Boolean(token && token !== 'undefined' && token !== 'null' && token.trim() !== '');
 }
 
 const getHeaders = (token: string): HeadersInit => ({

@@ -27,8 +27,7 @@
   --color-on-info: #08222F;
   --color-poster-fallback: #16161D;
 
-  /* Aliases for utility naming convenience */
-  --color-base: #08080A;
+  /* Aliases for utility naming convenience (never use --color-base as it collides with font size utility text-base) */
   --color-surface: #0E0E12;
   --color-elevated: #16161D;
   --color-overlay: #0A0A0C;
