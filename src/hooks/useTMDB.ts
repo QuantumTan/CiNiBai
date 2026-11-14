@@ -9,6 +9,7 @@ import {
   getMovieDetails,
   getTVDetails,
   getTVSeasonDetails,
+  getWatchProviders,
   searchMulti,
   getMovieGenres,
   getTVGenres,
@@ -171,6 +172,15 @@ export function useTVSeasonDetails(tvId: number, seasonNumber: number) {
     queryFn: () => getTVSeasonDetails(tvId, seasonNumber),
     staleTime: STALE_TIMES.season,
     enabled: !!tvId && seasonNumber >= 0,
+  });
+}
+
+export function useWatchProviders(mediaType: 'movie' | 'tv', id: number) {
+  return useQuery({
+    queryKey: ['watchProviders', mediaType, id],
+    queryFn: () => getWatchProviders(mediaType, id),
+    staleTime: STALE_TIMES.details,
+    enabled: id > 0,
   });
 }
 

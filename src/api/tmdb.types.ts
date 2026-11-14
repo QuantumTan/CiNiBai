@@ -258,5 +258,27 @@ export interface TMDBImage {
   iso_639_1: string | null;
 }
 
+// Watch Providers (from /movie/{id}/watch/providers and /tv/{id}/watch/providers)
+export interface TMDBWatchProvider {
+  logo_path: string | null;
+  provider_id: number;
+  provider_name: string;
+  display_priority: number;
+}
+
+export interface TMDBWatchProviderRegion {
+  link?: string;
+  flatrate?: TMDBWatchProvider[];
+  rent?: TMDBWatchProvider[];
+  buy?: TMDBWatchProvider[];
+  ads?: TMDBWatchProvider[];
+  free?: TMDBWatchProvider[];
+}
+
+export interface TMDBWatchProvidersResponse {
+  id: number;
+  results: Record<string, TMDBWatchProviderRegion>;
+}
+
 // Union type for media items in lists
 export type TMDBMediaItem = TMDBMovie | TMDBTVShow;

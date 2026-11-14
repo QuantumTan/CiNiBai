@@ -6,6 +6,10 @@ export const SITE_DESCRIPTION = 'Watch your favorite movies and TV shows for fre
 // TMDB
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
+// Default region for watch provider availability
+// TODO(region-picker): Connect to user-selectable region picker
+export const REGION = 'US';
+
 // Breakpoints (matching Tailwind defaults)
 export const BREAKPOINTS = {
   sm: 640,

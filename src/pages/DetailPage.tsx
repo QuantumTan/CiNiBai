@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ExternalLink, Tv } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
-import { getBackdropUrl, getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
+import { useMovieDetails, useTVDetails, useTVSeasonDetails, useWatchProviders } from '../hooks/useTMDB';
+import { getBackdropUrl, getPosterUrl, getLogoUrl, getTMDBErrorMessage } from '../api/tmdb';
+import type { TMDBWatchProvider } from '../api/tmdb.types';
+import { REGION } from '../lib/constants';
 import {
   formatRuntime,
   getYear,
@@ -17,6 +19,33 @@ import { DetailPageSkeleton } from '../components/ui/Skeleton';
 import { useWatchlistStore } from '../stores/watchlistStore';
 import { SEO } from '../components/common/SEO';
 import { useAmbientStore } from '../stores/ambient';
+
+function ProviderLogo({ logoPath, name }: { logoPath: string | null; name: string }) {
+  const [hasError, setHasError] = useState(false);
+  const logoUrl = getLogoUrl(logoPath, 'w92');
+
+  if (!logoUrl || hasError) {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-bg-elevated border border-border-default text-xs font-bold text-text-secondary"
+      >
+        {name.slice(0, 2).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setHasError(true)}
+      className="h-9 w-9 shrink-0 rounded-md object-cover bg-bg-elevated border border-border-subtle"
+    />
+  );
+}
 
 interface DetailPageProps {
   mediaType: 'movie' | 'tv';
@@ -42,9 +71,11 @@ export function DetailPage({ mediaType }: DetailPageProps) {
     mediaType === 'tv' ? numericId : 0,
     selectedSeason
   );
+  const watchProvidersQuery = useWatchProviders(mediaType, numericId);
 
   const refetch = () => {
     activeQuery.refetch();
+    watchProvidersQuery.refetch();
     if (mediaType === 'tv') {
       refetchSeason();
     }
@@ -175,6 +206,26 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
   const posterSrc = poster ? getPosterUrl(poster, 'w500') : null;
   const backdropSrc = backdrop ? getBackdropUrl(backdrop, 'w1280') : null;
+
+  const regionProviders = watchProvidersQuery.data?.results?.[REGION];
+  const sortAndDedupeProviders = (list?: TMDBWatchProvider[]) => {
+    if (!list || list.length === 0) return [];
+    const seen = new Set<number>();
+    return [...list]
+      .sort((a, b) => a.display_priority - b.display_priority)
+      .filter((p) => {
+        if (seen.has(p.provider_id)) return false;
+        seen.add(p.provider_id);
+        return true;
+      });
+  };
+  const providerGroups = [
+    { key: 'flatrate', label: 'Flatrate', items: sortAndDedupeProviders(regionProviders?.flatrate) },
+    { key: 'rent', label: 'Rent', items: sortAndDedupeProviders(regionProviders?.rent) },
+    { key: 'buy', label: 'Buy', items: sortAndDedupeProviders(regionProviders?.buy) },
+  ].filter((group) => group.items.length > 0);
+  const hasAnyProviders = providerGroups.length > 0;
+  const watchLink = regionProviders?.link;
 
   return (
     <div className="relative">
@@ -387,6 +438,122 @@ export function DetailPage({ mediaType }: DetailPageProps) {
             </div>
           </div>
         </div>
+
+        {/* Where to Watch Section */}
+        <section aria-labelledby="watch-providers-heading" className="mt-12">
+          <div className="rounded-xl border border-border-default bg-bg-surface/80 p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <Tv size={18} className="text-accent shrink-0" aria-hidden="true" />
+                <h2 id="watch-providers-heading" className="text-lg md:text-xl font-semibold text-text-primary tracking-tight">
+                  Where to Watch
+                </h2>
+                <span className="rounded-md bg-bg-elevated border border-border-default px-2 py-0.5 text-xs font-semibold text-accent">
+                  {REGION}
+                </span>
+              </div>
+
+              {watchLink ? (
+                <a
+                  href={watchLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors min-h-[44px] px-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <span>Streaming data by JustWatch</span>
+                  <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              ) : (
+                <span className="text-xs font-medium text-text-secondary">
+                  Streaming data by JustWatch
+                </span>
+              )}
+            </div>
+
+            {watchProvidersQuery.isLoading ? (
+              <div aria-busy="true" className="flex flex-wrap gap-3">
+                <span className="sr-only">Loading watch providers...</span>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-12 w-40 rounded-lg bg-white/5 animate-pulse motion-reduce:animate-none"
+                  />
+                ))}
+              </div>
+            ) : watchProvidersQuery.isError ? (
+              <div
+                role="alert"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-error/30 bg-bg-elevated/60 p-4"
+              >
+                <p className="text-xs sm:text-sm text-text-secondary">
+                  {getTMDBErrorMessage(watchProvidersQuery.error)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => watchProvidersQuery.refetch()}
+                  disabled={watchProvidersQuery.isFetching}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-xs font-semibold text-on-accent hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                >
+                  <RefreshCw size={14} className={watchProvidersQuery.isFetching ? 'animate-spin' : ''} aria-hidden="true" />
+                  <span>Retry</span>
+                </button>
+              </div>
+            ) : !hasAnyProviders ? (
+              <p className="text-sm text-text-secondary py-2">
+                Not available to stream in {REGION} — check back later.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                {providerGroups.map((group) => (
+                  <div key={group.key}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2.5">
+                      {group.label}
+                    </h3>
+                    <div className="flex flex-wrap gap-2.5">
+                      {group.items.map((provider) => {
+                        const content = (
+                          <>
+                            <ProviderLogo logoPath={provider.logo_path} name={provider.provider_name} />
+                            <span className="text-xs sm:text-sm font-medium text-text-primary truncate max-w-[160px]">
+                              {provider.provider_name}
+                            </span>
+                            {watchLink && (
+                              <ExternalLink
+                                size={13}
+                                className="text-text-secondary group-hover/provider:text-accent transition-colors shrink-0"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </>
+                        );
+
+                        return watchLink ? (
+                          <a
+                            key={`${group.key}-${provider.provider_id}`}
+                            href={watchLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${provider.provider_name} (${group.label}) on JustWatch (opens in new tab)`}
+                            className="group/provider inline-flex items-center gap-2.5 rounded-lg border border-border-default bg-bg-elevated/80 px-3 py-2 min-h-[44px] hover:border-border-strong hover:bg-bg-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          >
+                            {content}
+                          </a>
+                        ) : (
+                          <div
+                            key={`${group.key}-${provider.provider_id}`}
+                            className="inline-flex items-center gap-2.5 rounded-lg border border-border-default bg-bg-elevated/80 px-3 py-2 min-h-[44px]"
+                          >
+                            {content}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Top Cast Section */}
         {credits?.cast && credits.cast.length > 0 && (

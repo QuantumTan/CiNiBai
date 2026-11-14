@@ -7,7 +7,9 @@ import type {
   TMDBSeasonDetails,
   TMDBGenreList,
   TMDBMultiSearchResult,
+  TMDBWatchProvidersResponse,
 } from './tmdb.types';
+import { REGION } from '../lib/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -16,9 +18,8 @@ const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 export const ANIME_GENRE_ID = '16';
 export const JAPANESE_LANG = 'ja';
 
-// Default region for streaming providers
-// TODO: Connect to future dynamic user region picker
-export const WATCH_REGION = 'US';
+// Default region for streaming providers (re-exported from constants)
+export const WATCH_REGION = REGION;
 
 // TMDB Watch Provider IDs
 export const WATCH_PROVIDER_IDS = {
@@ -111,6 +112,7 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
 export type PosterSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original';
 export type BackdropSize = 'w300' | 'w780' | 'w1280' | 'original';
 export type ProfileSize = 'w45' | 'w185' | 'h632' | 'original';
+export type LogoSize = 'w45' | 'w92' | 'w154' | 'w185' | 'w300' | 'w500' | 'original';
 
 export function getPosterUrl(path: string | null | undefined, size: PosterSize = 'w342'): string {
   if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
@@ -123,6 +125,11 @@ export function getBackdropUrl(path: string | null | undefined, size: BackdropSi
 }
 
 export function getProfileUrl(path: string | null | undefined, size: ProfileSize = 'w185'): string {
+  if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
+  return `${IMAGE_BASE_URL}/${size}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export function getLogoUrl(path: string | null | undefined, size: LogoSize = 'w92'): string {
   if (!path || typeof path !== 'string' || path === 'undefined' || path.includes('undefined')) return '';
   return `${IMAGE_BASE_URL}/${size}${path.startsWith('/') ? path : `/${path}`}`;
 }
@@ -166,6 +173,16 @@ export function getMovieDetails(movieId: number) {
     append_to_response: 'credits,videos,similar,recommendations,external_ids',
   });
 }
+
+export function getWatchProviders(mediaType: 'movie' | 'tv', id: number) {
+  return tmdbFetch<TMDBWatchProvidersResponse>(`/${mediaType}/${id}/watch/providers`);
+}
+
+export type {
+  TMDBWatchProvider,
+  TMDBWatchProviderRegion,
+  TMDBWatchProvidersResponse,
+} from './tmdb.types';
 
 // --- TV Shows ---
 
