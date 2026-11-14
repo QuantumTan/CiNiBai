@@ -10,9 +10,14 @@ createRoot(document.getElementById('root')!).render(
 );
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  const registerSw = () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       // Progressive enhancement: ignore registration failure in restricted environments
     });
-  });
+  };
+  if (document.readyState === 'complete') {
+    registerSw();
+  } else {
+    window.addEventListener('load', registerSw, { once: true });
+  }
 }

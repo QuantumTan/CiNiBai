@@ -22,10 +22,11 @@ import { SEO } from '../components/common/SEO';
 import { useAmbientStore } from '../stores/ambient';
 
 function ProviderLogo({ logoPath, name }: { logoPath: string | null; name: string }) {
-  const [hasError, setHasError] = useState(false);
   const logoUrl = getLogoUrl(logoPath, 'w92');
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const hasError = !logoUrl || failedUrl === logoUrl;
 
-  if (!logoUrl || hasError) {
+  if (hasError) {
     return (
       <div
         aria-hidden="true"
@@ -42,7 +43,7 @@ function ProviderLogo({ logoPath, name }: { logoPath: string | null; name: strin
       alt=""
       loading="lazy"
       decoding="async"
-      onError={() => setHasError(true)}
+      onError={() => setFailedUrl(logoUrl)}
       className="h-9 w-9 shrink-0 rounded-md object-cover bg-bg-elevated border border-border-subtle"
     />
   );
@@ -55,6 +56,11 @@ interface DetailPageProps {
 export function DetailPage({ mediaType }: DetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
+
+  return <DetailPageContent key={`${mediaType}-${numericId}`} mediaType={mediaType} numericId={numericId} />;
+}
+
+function DetailPageContent({ mediaType, numericId }: { mediaType: 'movie' | 'tv'; numericId: number }) {
 
   const movieQuery = useMovieDetails(mediaType === 'movie' ? numericId : 0);
   const tvQuery = useTVDetails(mediaType === 'tv' ? numericId : 0);

@@ -58,7 +58,7 @@ export function SearchPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfiniteSearchMulti(trimmedQuery);
+  } = useInfiniteSearchMulti(debouncedQuery, 0);
 
   const {
     data: trendingToday,
@@ -72,8 +72,9 @@ export function SearchPage() {
   // Flatten and exclude person results from both count and grid
   const rawResults = data?.pages?.flatMap((page) => page.results) || [];
   const results = filterOutPersons(rawResults);
-  const liveSuggestions = trimmedQuery.length >= 2 ? results.slice(0, 6) : [];
+  const isQueryTooShort = trimmedQuery.length === 1;
   const isDebouncing = trimmedQuery.length >= 2 && trimmedQuery !== debouncedQuery;
+  const liveSuggestions = !isDebouncing && trimmedQuery.length >= 2 ? results.slice(0, 6) : [];
 
   const showLiveDropdown = dropdownOpen && trimmedQuery.length >= 2;
   const showRecentDropdown = dropdownOpen && trimmedQuery.length < 2 && recentSearches.length > 0;
@@ -186,7 +187,16 @@ export function SearchPage() {
       </div>
 
       {/* Accessible Search Combobox + Suggestions Dropdown */}
-      <div ref={searchContainerRef} className="relative mx-auto max-w-2xl z-30">
+      <div
+        ref={searchContainerRef}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setDropdownOpen(false);
+            setActiveIndex(-1);
+          }
+        }}
+        className="relative mx-auto max-w-2xl z-30"
+      >
         <form
           role="search"
           onSubmit={(e) => {
@@ -491,8 +501,17 @@ export function SearchPage() {
           </div>
         )}
 
+        {/* Short Query Hint (1 character) */}
+        {isQueryTooShort && (
+          <div className="text-center py-12 max-w-md mx-auto">
+            <p className="text-sm text-text-secondary">
+              Type at least 2 characters to search movies, series, and anime.
+            </p>
+          </div>
+        )}
+
         {/* Loading Skeleton */}
-        {isLoading && trimmedQuery && (
+        {trimmedQuery.length >= 2 && (isDebouncing || isLoading) && (
           <div
             aria-busy="true"
             className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
@@ -508,7 +527,7 @@ export function SearchPage() {
         )}
 
         {/* Error State */}
-        {isError && trimmedQuery && (
+        {trimmedQuery.length >= 2 && !isDebouncing && isError && (
           <div
             role="alert"
             className="my-12 rounded-lg border border-error/30 bg-bg-surface p-8 text-center shadow-lg max-w-lg mx-auto"
@@ -533,7 +552,7 @@ export function SearchPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !isError && trimmedQuery && results.length === 0 && (
+        {trimmedQuery.length >= 2 && !isDebouncing && !isLoading && !isError && results.length === 0 && (
           <div className="text-center py-16 max-w-md mx-auto">
             <h2 className="text-lg text-text-primary font-semibold">
               No results for "{trimmedQuery}"
@@ -552,7 +571,7 @@ export function SearchPage() {
         )}
 
         {/* Populated Results Grid */}
-        {!isLoading && !isError && trimmedQuery && results.length > 0 && (
+        {trimmedQuery.length >= 2 && !isDebouncing && !isLoading && !isError && results.length > 0 && (
           <>
             <div className="mb-6 flex items-center justify-between">
               <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary" aria-live="polite">

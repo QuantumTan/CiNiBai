@@ -25,14 +25,21 @@ export function LiquidMediaRail({
 }: LiquidMediaRailProps) {
   const { ref: lazyRef, isVisible } = useRailIntersection('150px 0px', !lazyMount);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const onVisibleRef = useRef(onVisible);
+  const hasNotifiedRef = useRef(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
-    if (lazyMount && isVisible) {
-      onVisible?.();
+    onVisibleRef.current = onVisible;
+  }, [onVisible]);
+
+  useEffect(() => {
+    if (lazyMount && isVisible && !hasNotifiedRef.current) {
+      hasNotifiedRef.current = true;
+      onVisibleRef.current?.();
     }
-  }, [lazyMount, isVisible, onVisible]);
+  }, [lazyMount, isVisible]);
 
   const checkScrollState = () => {
     const el = scrollRef.current;

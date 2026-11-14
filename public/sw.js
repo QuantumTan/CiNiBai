@@ -37,10 +37,10 @@ self.addEventListener('fetch', (event) => {
       const cached = await cache.match(cacheKey, { ignoreVary: true });
 
       const networkPromise = fetch(event.request)
-        .then((response) => {
-          const contentType = response.headers.get('content-type') || '';
+        .then(async (response) => {
+          const contentType = (response.headers.get('content-type') || '').toLowerCase();
           if (response.ok && response.type !== 'opaque' && contentType.includes('application/json')) {
-            void cache.put(cacheKey, response.clone());
+            await cache.put(cacheKey, response.clone()).catch(() => undefined);
           }
           return response;
         })
