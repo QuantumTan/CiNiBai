@@ -7,7 +7,7 @@ import { SEO } from '../components/common/SEO';
 import { useDiscoverMovies, useDiscoverTVShows, useMovieGenres, useTVGenres } from '../hooks/useTMDB';
 import type { DiscoverParams } from '../api/tmdb';
 import { useAmbientStore } from '../stores/ambient';
-import { getPosterUrl } from '../api/tmdb';
+import { getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
 
 interface BrowsePageProps {
   mediaType: 'movie' | 'tv';
@@ -201,12 +201,12 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           </div>
           <h2 className="text-lg font-semibold text-text-primary">Failed to load content</h2>
           <p className="mt-2 text-sm text-text-secondary">
-            {(error as Error)?.message || 'A network error occurred while querying titles.'}
+            {getTMDBErrorMessage(error)}
           </p>
           <Button
             variant="primary"
             onClick={() => query.refetch()}
-            className="mt-6 inline-flex items-center gap-2"
+            className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
           >
             <RefreshCw size={16} aria-hidden="true" />
             <span>Try Again</span>

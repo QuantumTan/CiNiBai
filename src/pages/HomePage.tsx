@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { CinematicHero } from '../components/home/CinematicHero';
 import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
 import { SEO } from '../components/common/SEO';
+import { getTMDBErrorMessage } from '../api/tmdb';
+import type { TMDBMovie, TMDBTVShow } from '../api/tmdb.types';
 import {
   useTrending,
   useTrendingToday,
@@ -17,18 +20,110 @@ import {
   useAnime,
 } from '../hooks/useTMDB';
 
+interface HomeRailProps {
+  title: string;
+  items?: (TMDBMovie | TMDBTVShow)[];
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
+  seeMoreLink?: string;
+  isTop10?: boolean;
+}
+
+function HomeRail({
+  title,
+  items,
+  isLoading,
+  isError,
+  error,
+  refetch,
+  seeMoreLink,
+  isTop10 = false,
+}: HomeRailProps) {
+  if (isError) {
+    return (
+      <section className="relative my-8 space-y-3.5" role="region" aria-label={title}>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="tracking-tight-title text-xl font-bold text-text-primary md:text-2xl">
+            {title}
+          </h2>
+        </div>
+        <div
+          role="alert"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-error/30 bg-bg-surface/80 p-5 backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error/15 text-error border border-error/20">
+              <AlertCircle size={20} aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Unable to load this row</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {getTMDBErrorMessage(error)}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Retry</span>
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (!isLoading && (!items || items.length === 0)) {
+    return (
+      <section className="relative my-8 space-y-3.5" role="region" aria-label={title}>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="tracking-tight-title text-xl font-bold text-text-primary md:text-2xl">
+            {title}
+          </h2>
+        </div>
+        <div className="rounded-xl border border-border-default bg-bg-surface/50 p-6 text-center">
+          <p className="text-sm text-text-secondary">No titles in this row right now.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (isTop10) {
+    return (
+      <Top10Row
+        title={title}
+        items={items as any}
+        isLoading={isLoading}
+      />
+    );
+  }
+
+  return (
+    <ContentRow
+      title={title}
+      items={items}
+      isLoading={isLoading}
+      seeMoreLink={seeMoreLink}
+    />
+  );
+}
+
 export function HomePage() {
-  const { data: trending, isLoading: trendingLoading } = useTrending('all', 'week');
-  const { data: trendingToday, isLoading: trendingTodayLoading } = useTrendingToday();
-  const { data: popularMovies, isLoading: popularMoviesLoading } = usePopularMovies();
-  const { data: nowPlaying, isLoading: nowPlayingLoading } = useNowPlayingMovies();
-  const { data: netflix, isLoading: netflixLoading } = useNetflixOriginals();
-  const { data: prime, isLoading: primeLoading } = usePrimeOriginals();
-  const { data: disney, isLoading: disneyLoading } = useDisneyOriginals();
-  const { data: hbo, isLoading: hboLoading } = useHBOMaxOriginals();
-  const { data: hulu, isLoading: huluLoading } = useHuluOriginals();
-  const { data: apple, isLoading: appleLoading } = useAppleTVOriginals();
-  const { data: anime, isLoading: animeLoading } = useAnime();
+  const { data: trending, isLoading: trendingLoading, isError: trendingError, error: trendingErr, refetch: refetchTrending } = useTrending('all', 'week');
+  const { data: trendingToday, isLoading: trendingTodayLoading, isError: trendingTodayError, error: trendingTodayErr, refetch: refetchTrendingToday } = useTrendingToday();
+  const { data: popularMovies, isLoading: popularMoviesLoading, isError: popularMoviesError, error: popularMoviesErr, refetch: refetchPopularMovies } = usePopularMovies();
+  const { data: nowPlaying, isLoading: nowPlayingLoading, isError: nowPlayingError, error: nowPlayingErr, refetch: refetchNowPlaying } = useNowPlayingMovies();
+  const { data: netflix, isLoading: netflixLoading, isError: netflixError, error: netflixErr, refetch: refetchNetflix } = useNetflixOriginals();
+  const { data: prime, isLoading: primeLoading, isError: primeError, error: primeErr, refetch: refetchPrime } = usePrimeOriginals();
+  const { data: disney, isLoading: disneyLoading, isError: disneyError, error: disneyErr, refetch: refetchDisney } = useDisneyOriginals();
+  const { data: hbo, isLoading: hboLoading, isError: hboError, error: hboErr, refetch: refetchHbo } = useHBOMaxOriginals();
+  const { data: hulu, isLoading: huluLoading, isError: huluError, error: huluErr, refetch: refetchHulu } = useHuluOriginals();
+  const { data: apple, isLoading: appleLoading, isError: appleError, error: appleErr, refetch: refetchApple } = useAppleTVOriginals();
+  const { data: anime, isLoading: animeLoading, isError: animeError, error: animeErr, refetch: refetchAnime } = useAnime();
 
   // Filter items with backdrops for the cinematic hero
   const heroItems = trending?.results.filter((item) => item.backdrop_path) || [];
@@ -44,7 +139,36 @@ export function HomePage() {
       <h1 className="sr-only">CineBai — Discover Movies, TV Series & Anime</h1>
 
       {/* Cinematic Hero Showcase */}
-      <CinematicHero items={heroItems} />
+      {trendingError ? (
+        <section aria-label="Featured Showcase" className="mx-auto max-w-7xl px-4 pt-6 lg:px-8">
+          <div
+            role="alert"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-error/30 bg-bg-surface/80 p-6 backdrop-blur-sm shadow-lg"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-error/15 text-error border border-error/20">
+                <AlertCircle size={24} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold font-display text-text-primary">Featured content unavailable</h2>
+                <p className="text-xs text-text-secondary mt-1">
+                  {getTMDBErrorMessage(trendingErr)}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => refetchTrending()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-accent text-on-accent text-xs font-semibold hover:bg-accent-light transition-colors min-h-[44px] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              <span>Retry</span>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <CinematicHero items={heroItems} />
+      )}
 
       {/* Curated Streaming Studios */}
       <section aria-labelledby="studios-heading" className="mx-auto max-w-7xl px-4 pt-4 pb-6 lg:px-8">
@@ -111,79 +235,113 @@ export function HomePage() {
 
       {/* Curated Media Rails */}
       <div className="mx-auto max-w-7xl space-y-8 px-4 pt-8 lg:px-8">
-        <Top10Row
+        <HomeRail
           title="Top 10 Trending Today"
           items={trendingToday?.results}
           isLoading={trendingTodayLoading}
+          isError={trendingTodayError}
+          error={trendingTodayErr}
+          refetch={refetchTrendingToday}
+          isTop10
         />
 
-        <ContentRow
+        <HomeRail
           title="Trending This Week"
           items={trending?.results}
           isLoading={trendingLoading}
+          isError={trendingError}
+          error={trendingErr}
+          refetch={refetchTrending}
           seeMoreLink="/movies"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on Apple TV+"
           items={apple?.results}
           isLoading={appleLoading}
+          isError={appleError}
+          error={appleErr}
+          refetch={refetchApple}
           seeMoreLink="/network/apple"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on Netflix"
           items={netflix?.results}
           isLoading={netflixLoading}
+          isError={netflixError}
+          error={netflixErr}
+          refetch={refetchNetflix}
           seeMoreLink="/network/netflix"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on HBO Max"
           items={hbo?.results}
           isLoading={hboLoading}
+          isError={hboError}
+          error={hboErr}
+          refetch={refetchHbo}
           seeMoreLink="/network/hbo"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on Prime Video"
           items={prime?.results}
           isLoading={primeLoading}
+          isError={primeError}
+          error={primeErr}
+          refetch={refetchPrime}
           seeMoreLink="/network/prime"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on Disney+"
           items={disney?.results}
           isLoading={disneyLoading}
+          isError={disneyError}
+          error={disneyErr}
+          refetch={refetchDisney}
           seeMoreLink="/network/disney"
         />
 
-        <ContentRow
+        <HomeRail
           title="Anime Showcase"
           items={anime?.results}
           isLoading={animeLoading}
+          isError={animeError}
+          error={animeErr}
+          refetch={refetchAnime}
           seeMoreLink="/anime"
         />
 
-        <ContentRow
+        <HomeRail
           title="Streaming on Hulu"
           items={hulu?.results}
           isLoading={huluLoading}
+          isError={huluError}
+          error={huluErr}
+          refetch={refetchHulu}
           seeMoreLink="/network/hulu"
         />
 
-        <ContentRow
+        <HomeRail
           title="Popular Movies"
           items={popularMovies?.results}
           isLoading={popularMoviesLoading}
+          isError={popularMoviesError}
+          error={popularMoviesErr}
+          refetch={refetchPopularMovies}
           seeMoreLink="/movies"
         />
 
-        <ContentRow
+        <HomeRail
           title="In Theaters"
           items={nowPlaying?.results}
           isLoading={nowPlayingLoading}
+          isError={nowPlayingError}
+          error={nowPlayingErr}
+          refetch={refetchNowPlaying}
           seeMoreLink="/movies"
         />
       </div>

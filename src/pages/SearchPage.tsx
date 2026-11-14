@@ -6,7 +6,7 @@ import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { useAmbientStore } from '../stores/ambient';
-import { getPosterUrl } from '../api/tmdb';
+import { getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
 import { trimQuery, filterOutPersons, formatResultCount } from '../lib/utils';
 
 const SUGGESTIONS = [
@@ -193,12 +193,12 @@ export function SearchPage() {
             </div>
             <h2 className="text-lg font-semibold text-text-primary">Couldn't complete search</h2>
             <p className="mt-2 text-sm text-text-secondary">
-              {(error as Error)?.message || 'A network error occurred while communicating with TMDB.'}
+              {getTMDBErrorMessage(error)}
             </p>
             <Button
               variant="primary"
               onClick={() => refetch()}
-              className="mt-6 inline-flex items-center gap-2"
+              className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
             >
               <RefreshCw size={16} aria-hidden="true" />
               <span>Retry Search</span>

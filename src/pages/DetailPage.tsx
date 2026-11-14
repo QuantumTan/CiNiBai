@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
-import { getBackdropUrl, getPosterUrl } from '../api/tmdb';
+import { getBackdropUrl, getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
 import {
   formatRuntime,
   getYear,
@@ -29,9 +29,13 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   const movieQuery = useMovieDetails(mediaType === 'movie' ? numericId : 0);
   const tvQuery = useTVDetails(mediaType === 'tv' ? numericId : 0);
 
-  const isLoading = mediaType === 'movie' ? movieQuery.isLoading : tvQuery.isLoading;
+  const activeQuery = mediaType === 'movie' ? movieQuery : tvQuery;
+  const isLoading = activeQuery.isLoading;
+  const isError = activeQuery.isError;
+  const error = activeQuery.error;
   const movie = movieQuery.data;
   const tv = tvQuery.data;
+  const refetch = () => activeQuery.refetch();
 
   const [selectedSeason, setSelectedSeason] = useState(1);
   const { data: seasonData } = useTVSeasonDetails(
@@ -81,6 +85,49 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   }, [showTrailer]);
 
   if (isLoading) return <DetailPageSkeleton />;
+
+  if (isError || (!isLoading && !movie && !tv)) {
+    return (
+      <div className="relative min-h-[60vh] flex items-center justify-center px-4 py-16">
+        <SEO
+          title="Couldn't load this title - CineBai"
+          description="Failed to load title information on CineBai."
+        />
+        <div
+          role="alert"
+          className="w-full max-w-lg rounded-xl border border-error/30 bg-bg-surface/80 p-8 text-center shadow-2xl backdrop-blur-md"
+        >
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-error/15 text-error mb-4 border border-error/20">
+            <AlertCircle size={28} aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl font-bold font-display tracking-tight text-text-primary">
+            Couldn't load this title
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            {getTMDBErrorMessage(error)}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="primary"
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 min-h-[44px] px-5"
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              <span>Try Again</span>
+            </Button>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-md bg-white/10 hover:bg-white/15 border border-border-default hover:border-border-strong px-4 py-2 text-xs font-semibold text-text-primary transition-colors min-h-[44px]"
+              aria-label="Back to Browse"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span>Back to Browse</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Determine data based on media type
   const title = mediaType === 'movie' ? movie?.title : tv?.name;

@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
 import { useAmbientStore } from '../stores/ambient';
-import { WATCH_PROVIDER_IDS, WATCH_REGION } from '../api/tmdb';
+import { WATCH_PROVIDER_IDS, WATCH_REGION, getTMDBErrorMessage } from '../api/tmdb';
 import type { RGBColor } from '../lib/color';
 
 interface NetworkConfig {
@@ -244,12 +244,12 @@ export function NetworkPage() {
           </div>
           <h2 className="text-lg font-semibold text-text-primary">Unable to load studio titles</h2>
           <p className="mt-2 text-sm text-text-secondary">
-            {(error as Error)?.message || 'A network error occurred while querying titles.'}
+            {getTMDBErrorMessage(error)}
           </p>
           <Button
             variant="primary"
             onClick={() => refetch()}
-            className="mt-6 inline-flex items-center gap-2"
+            className="mt-6 inline-flex items-center gap-2 min-h-[44px]"
           >
             <RefreshCw size={16} aria-hidden="true" />
             <span>Try Again</span>
