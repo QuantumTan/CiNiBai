@@ -8,6 +8,7 @@ import type {
   TMDBGenreList,
   TMDBMultiSearchResult,
   TMDBWatchProvidersResponse,
+  DiscoverParams,
 } from './tmdb.types';
 import { REGION } from '../lib/constants';
 
@@ -182,6 +183,7 @@ export type {
   TMDBWatchProvider,
   TMDBWatchProviderRegion,
   TMDBWatchProvidersResponse,
+  DiscoverParams,
 } from './tmdb.types';
 
 // --- TV Shows ---
@@ -229,23 +231,6 @@ export function getTVGenres() {
 }
 
 // --- Discover (for browse with filters) ---
-
-export interface DiscoverParams {
-  page?: number;
-  sort_by?: string;
-  with_genres?: string;
-  'vote_average.gte'?: number;
-  'vote_average.lte'?: number;
-  'primary_release_date.gte'?: string;
-  'primary_release_date.lte'?: string;
-  'first_air_date.gte'?: string;
-  'first_air_date.lte'?: string;
-  'vote_count.gte'?: number;
-  with_networks?: string;
-  with_watch_providers?: string;
-  watch_region?: string;
-  with_original_language?: string;
-}
 
 export function discoverMovies(params: DiscoverParams = {}) {
   return tmdbFetch<TMDBPaginatedResponse<TMDBMovie>>('/discover/movie', params as Record<string, string | number>);

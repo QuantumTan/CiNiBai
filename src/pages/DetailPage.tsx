@@ -361,12 +361,13 @@ export function DetailPage({ mediaType }: DetailPageProps) {
             {genres && genres.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {genres.map((g) => (
-                  <span
+                  <Link
                     key={g.id}
-                    className="rounded-full bg-white/5 border border-border-default px-3 py-1 text-xs font-semibold text-text-secondary"
+                    to={`/${mediaType === 'movie' ? 'movies' : 'tv'}?genre=${g.id}`}
+                    className="inline-flex items-center min-h-[44px] rounded-full bg-white/5 border border-border-default px-4 text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-border-strong hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     {g.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}

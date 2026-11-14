@@ -1,36 +1,90 @@
-import { useState, useEffect } from 'react';
-import { Film, Tv, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Film, Tv, AlertCircle, RefreshCw, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { MovieCard } from '../components/cards/MovieCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { SEO } from '../components/common/SEO';
 import { useDiscoverMovies, useDiscoverTVShows, useMovieGenres, useTVGenres } from '../hooks/useTMDB';
-import type { DiscoverParams } from '../api/tmdb';
 import { useAmbientStore } from '../stores/ambient';
 import { getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
+import { buildBrowseDiscoverParams } from '../lib/browseFilters';
 
 interface BrowsePageProps {
   mediaType: 'movie' | 'tv';
 }
 
+const RATING_OPTIONS = [
+  { value: '', label: 'Any Rating' },
+  { value: '9', label: '9.0+ Masterpiece' },
+  { value: '8', label: '8.0+ Great' },
+  { value: '7', label: '7.0+ Good' },
+  { value: '6', label: '6.0+ Fair' },
+  { value: '5', label: '5.0+ All Notable' },
+];
+
 export function BrowsePage({ mediaType }: BrowsePageProps) {
-  const [selectedGenre, setSelectedGenre] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState('popularity.desc');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAllGenres, setShowAllGenres] = useState(false);
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
+
+  const genreParam = searchParams.get('genre');
+  const parsedGenre = genreParam ? Number(genreParam) : null;
+  const selectedGenre = parsedGenre && Number.isFinite(parsedGenre) && parsedGenre > 0 ? parsedGenre : null;
+  const sortBy = searchParams.get('sort') || 'popularity.desc';
+  const minRating = searchParams.get('rating') || '';
+  const selectedYear = searchParams.get('year') || '';
+
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const recentYears = Array.from({ length: 10 }, (_, idx) => {
+      const y = String(currentYear - idx);
+      return { value: y, label: y };
+    });
+    return [
+      { value: '', label: 'Any Year' },
+      ...recentYears,
+      { value: '2020s', label: '2020s' },
+      { value: '2010s', label: '2010s' },
+      { value: '2000s', label: '2000s' },
+      { value: '1990s', label: '1990s' },
+      { value: 'classic', label: 'Before 1990' },
+    ];
+  }, []);
+
+  const updateFilterParam = (key: string, value: string | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (!value) {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  const resetAllFilters = () => {
+    setSearchParams({}, { replace: true });
+  };
+
+  const hasActiveFilters =
+    selectedGenre !== null || minRating !== '' || selectedYear !== '' || sortBy !== 'popularity.desc';
 
   const { data: movieGenres } = useMovieGenres();
   const { data: tvGenres } = useTVGenres();
   const genres = mediaType === 'movie' ? movieGenres?.genres : tvGenres?.genres;
 
-  const dateSortDesc = mediaType === 'movie' ? 'primary_release_date.desc' : 'first_air_date.desc';
-  const dateSortAsc = mediaType === 'movie' ? 'primary_release_date.asc' : 'first_air_date.asc';
-
-  const params: DiscoverParams = {
-    sort_by: sortBy === 'date.desc' ? dateSortDesc : sortBy === 'date.asc' ? dateSortAsc : sortBy,
-    ...(selectedGenre ? { with_genres: String(selectedGenre) } : {}),
-    ...(sortBy === 'vote_average.desc' ? { 'vote_count.gte': mediaType === 'movie' ? 100 : 50 } : {}),
-  };
+  const params = buildBrowseDiscoverParams({
+    mediaType,
+    sortBy,
+    genreId: selectedGenre,
+    minRating,
+    year: selectedYear,
+  });
 
   // Only call the query required for the active mediaType
   const movieQuery = useDiscoverMovies(params, mediaType === 'movie');
@@ -77,8 +131,16 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
       ? 'Browse and discover trending, top-rated, and newly released films with cast and ratings on CineBai.'
       : 'Explore popular TV series, top-rated shows, and season guides on CineBai.';
 
-  const displayedGenres =
-    genres && !showAllGenres && genres.length > 8 ? genres.slice(0, 8) : genres || [];
+  const displayedGenres = useMemo(() => {
+    if (!genres) return [];
+    if (showAllGenres || genres.length <= 8) return genres;
+    const first8 = genres.slice(0, 8);
+    if (selectedGenre && !first8.some((g) => g.id === selectedGenre)) {
+      const selectedObj = genres.find((g) => g.id === selectedGenre);
+      if (selectedObj) return [...first8, selectedObj];
+    }
+    return first8;
+  }, [genres, showAllGenres, selectedGenre]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 md:pt-12 lg:px-8">
@@ -118,7 +180,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
             <button
               type="button"
               aria-pressed={selectedGenre === null}
-              onClick={() => setSelectedGenre(null)}
+              onClick={() => updateFilterParam('genre', null)}
               className={`min-h-[44px] px-4 rounded-full text-xs font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 selectedGenre === null
                   ? 'bg-accent text-on-accent shadow-sm'
@@ -135,7 +197,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
                   type="button"
                   aria-pressed={isSelected}
                   title={isSelected ? 'Tap again to clear' : undefined}
-                  onClick={() => setSelectedGenre(isSelected ? null : genre.id)}
+                  onClick={() => updateFilterParam('genre', isSelected ? null : String(genre.id))}
                   className={`min-h-[44px] px-4 rounded-full text-xs font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     isSelected
                       ? 'bg-accent text-on-accent shadow-sm'
@@ -159,34 +221,85 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           </div>
         </fieldset>
 
-        {/* Sort Controls */}
-        <div
-          role="radiogroup"
-          aria-label="Sort catalog by"
-          className="mt-4 flex flex-wrap items-center gap-2"
-        >
-          <span className="text-xs uppercase tracking-wider text-text-secondary font-semibold mr-1">
-            Sort:
-          </span>
-          {sortOptions.map((opt) => {
-            const isActive = sortBy === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => setSortBy(opt.value)}
-                className={`min-h-[44px] px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  isActive
-                    ? 'bg-accent text-on-accent shadow-sm'
-                    : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
-                }`}
+        {/* Sort & Rating / Year Filters */}
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            role="radiogroup"
+            aria-label="Sort catalog by"
+            className="flex flex-wrap items-center gap-2"
+          >
+            <span className="text-xs uppercase tracking-wider text-text-secondary font-semibold mr-1">
+              Sort:
+            </span>
+            {sortOptions.map((opt) => {
+              const isActive = sortBy === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  onClick={() => updateFilterParam('sort', opt.value === 'popularity.desc' ? null : opt.value)}
+                  className={`min-h-[44px] px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    isActive
+                      ? 'bg-accent text-on-accent shadow-sm'
+                      : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <label htmlFor="browse-rating-filter" className="text-xs font-semibold text-text-secondary">
+                Rating
+              </label>
+              <select
+                id="browse-rating-filter"
+                value={minRating}
+                onChange={(e) => updateFilterParam('rating', e.target.value || null)}
+                className="min-h-[44px] rounded-lg border border-border-default bg-bg-elevated px-3 text-xs font-semibold text-text-primary cursor-pointer hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                {opt.label}
+                {RATING_OPTIONS.map((opt) => (
+                  <option key={opt.value || 'any-rating'} value={opt.value} className="bg-bg-elevated text-text-primary">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="browse-year-filter" className="text-xs font-semibold text-text-secondary">
+                Year
+              </label>
+              <select
+                id="browse-year-filter"
+                value={selectedYear}
+                onChange={(e) => updateFilterParam('year', e.target.value || null)}
+                className="min-h-[44px] rounded-lg border border-border-default bg-bg-elevated px-3 text-xs font-semibold text-text-primary cursor-pointer hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {yearOptions.map((opt) => (
+                  <option key={opt.value || 'any-year'} value={opt.value} className="bg-bg-elevated text-text-primary">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="inline-flex items-center gap-1.5 min-h-[44px] rounded-lg border border-border-default bg-white/5 px-3 text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <RotateCcw size={13} aria-hidden="true" />
+                <span>Reset</span>
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
       </div>
 
@@ -237,10 +350,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           <p className="text-base text-text-secondary">No titles found for this filter selection.</p>
           <Button
             variant="ghost"
-            onClick={() => {
-              setSelectedGenre(null);
-              setSortBy('popularity.desc');
-            }}
+            onClick={resetAllFilters}
             className="mt-4"
           >
             Reset Filters

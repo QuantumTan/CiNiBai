@@ -280,5 +280,23 @@ export interface TMDBWatchProvidersResponse {
   results: Record<string, TMDBWatchProviderRegion>;
 }
 
+// Discover query parameters for /discover/movie and /discover/tv
+export interface DiscoverParams {
+  page?: number;
+  sort_by?: string;
+  with_genres?: string;
+  'vote_average.gte'?: number;
+  'vote_average.lte'?: number;
+  'primary_release_date.gte'?: string;
+  'primary_release_date.lte'?: string;
+  'first_air_date.gte'?: string;
+  'first_air_date.lte'?: string;
+  'vote_count.gte'?: number;
+  with_networks?: string;
+  with_watch_providers?: string;
+  watch_region?: string;
+  with_original_language?: string;
+}
+
 // Union type for media items in lists
 export type TMDBMediaItem = TMDBMovie | TMDBTVShow;
