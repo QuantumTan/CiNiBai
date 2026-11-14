@@ -17,6 +17,7 @@ import { MovieCard } from '../components/cards/MovieCard';
 import { ScrollContainer } from '../components/ui/ScrollContainer';
 import { DetailPageSkeleton } from '../components/ui/Skeleton';
 import { useWatchlistStore } from '../stores/watchlistStore';
+import { useRecentlyViewedStore } from '../stores/recentlyViewedStore';
 import { SEO } from '../components/common/SEO';
 import { useAmbientStore } from '../stores/ambient';
 
@@ -91,9 +92,36 @@ export function DetailPage({ mediaType }: DetailPageProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
+  const recordView = useRecentlyViewedStore((s) => s.recordView);
 
   const backdrop = (mediaType === 'movie' ? movie?.backdrop_path : tv?.backdrop_path) ?? null;
   const poster = (mediaType === 'movie' ? movie?.poster_path : tv?.poster_path) ?? null;
+
+  // Record detail view into persisted recently viewed history
+  useEffect(() => {
+    if (isLoading || isError) return;
+    if (mediaType === 'movie' && movie && movie.id === numericId) {
+      recordView({
+        id: movie.id,
+        type: 'movie',
+        title: movie.title,
+        posterPath: movie.poster_path,
+        backdropPath: movie.backdrop_path,
+        voteAverage: movie.vote_average,
+        releaseDate: movie.release_date || '',
+      });
+    } else if (mediaType === 'tv' && tv && tv.id === numericId) {
+      recordView({
+        id: tv.id,
+        type: 'tv',
+        title: tv.name,
+        posterPath: tv.poster_path,
+        backdropPath: tv.backdrop_path,
+        voteAverage: tv.vote_average,
+        releaseDate: tv.first_air_date || '',
+      });
+    }
+  }, [mediaType, numericId, movie, tv, isLoading, isError, recordView]);
 
   // Dynamically sample dominant palette from media artwork
   useEffect(() => {

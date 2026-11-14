@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { CinematicHero } from '../components/home/CinematicHero';
 import { ContentRow } from '../components/home/ContentRow';
@@ -6,6 +7,7 @@ import { Top10Row } from '../components/home/Top10Row';
 import { SEO } from '../components/common/SEO';
 import { getTMDBErrorMessage } from '../api/tmdb';
 import type { TMDBMovie, TMDBTVShow } from '../api/tmdb.types';
+import { useRecentlyViewedStore } from '../stores/recentlyViewedStore';
 import {
   useTrending,
   useTrendingToday,
@@ -116,6 +118,48 @@ function HomeRail({
 }
 
 export function HomePage() {
+  const recentlyViewed = useRecentlyViewedStore((s) => s.items);
+  const recentlyViewedMedia = useMemo<(TMDBMovie | TMDBTVShow)[]>(
+    () =>
+      recentlyViewed.map((item) =>
+        item.type === 'tv'
+          ? ({
+              id: item.id,
+              name: item.title,
+              original_name: item.title,
+              overview: '',
+              poster_path: item.posterPath,
+              backdrop_path: item.backdropPath,
+              first_air_date: item.releaseDate,
+              vote_average: item.voteAverage,
+              vote_count: 0,
+              popularity: 0,
+              genre_ids: [],
+              origin_country: [],
+              original_language: 'en',
+              media_type: 'tv',
+            } satisfies TMDBTVShow)
+          : ({
+              id: item.id,
+              title: item.title,
+              original_title: item.title,
+              overview: '',
+              poster_path: item.posterPath,
+              backdrop_path: item.backdropPath,
+              release_date: item.releaseDate,
+              vote_average: item.voteAverage,
+              vote_count: 0,
+              popularity: 0,
+              genre_ids: [],
+              adult: false,
+              original_language: 'en',
+              video: false,
+              media_type: 'movie',
+            } satisfies TMDBMovie)
+      ),
+    [recentlyViewed]
+  );
+
   const { data: trending, isLoading: trendingLoading, isError: trendingError, isFetching: trendingFetching, error: trendingErr, refetch: refetchTrending } = useTrending('all', 'week');
   const { data: trendingToday, isLoading: trendingTodayLoading, isError: trendingTodayError, isFetching: trendingTodayFetching, error: trendingTodayErr, refetch: refetchTrendingToday } = useTrendingToday();
   const { data: popularMovies, isLoading: popularMoviesLoading, isError: popularMoviesError, isFetching: popularMoviesFetching, error: popularMoviesErr, refetch: refetchPopularMovies } = usePopularMovies();
@@ -239,6 +283,13 @@ export function HomePage() {
 
       {/* Curated Media Rails */}
       <div className="mx-auto max-w-7xl space-y-8 px-4 pt-8 lg:px-8">
+        {recentlyViewedMedia.length > 0 && (
+          <ContentRow
+            title="Recently Viewed"
+            items={recentlyViewedMedia}
+          />
+        )}
+
         <HomeRail
           title="Top 10 Trending Today"
           items={trendingToday?.results}
