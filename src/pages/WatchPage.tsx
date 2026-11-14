@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Maximize,
@@ -12,15 +12,36 @@ import {
   X,
   FastForward,
   ChevronDown,
-  Sparkles,
 } from 'lucide-react';
 import { SEO } from '../components/common/SEO';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails } from '../hooks/useTMDB';
-import { getProviders, getDefaultProvider } from '../api/providers';
+import {
+  PROVIDER_IDS,
+  getProviders,
+  getDefaultProvider,
+  testServerConnectivity,
+} from '../api/providers';
 import type { EmbedSource } from '../api/providers';
 import { useAmbientStore } from '../stores/ambient';
 import { getBackdropUrl, getPosterUrl } from '../api/tmdb';
 import { formatRating, getYear } from '../lib/utils';
+
+const IFRAME_LOAD_TIMEOUT_MS = 15000;
+const MIRROR_PROBE_TIMEOUT_MS = 2500;
+
+type MirrorStatus = 'checking' | 'online' | 'failed';
+type IframeErrorReason = 'timeout' | 'cancelled' | 'error';
+
+function getStatusLabel(status: MirrorStatus): string {
+  switch (status) {
+    case 'online':
+      return 'Online';
+    case 'failed':
+      return 'Unavailable';
+    default:
+      return 'Checking…';
+  }
+}
 
 export function WatchPage() {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -40,27 +61,39 @@ export function WatchPage() {
     localStorage.setItem('hideAdblockBanner', 'true');
   };
 
-  const season = Number(searchParams.get('s') || '1');
-  const episode = Number(searchParams.get('e') || '1');
-  const [activeSeason, setActiveSeason] = useState(season);
-  const [prevSeason, setPrevSeason] = useState(season);
-
-  if (prevSeason !== season) {
-    setPrevSeason(season);
-    setActiveSeason(season);
-  }
+  const parsedSeason = Number(searchParams.get('s'));
+  const parsedEpisode = Number(searchParams.get('e'));
+  const season = Number.isFinite(parsedSeason) && parsedSeason >= 1 ? Math.floor(parsedSeason) : 1;
+  const episode = Number.isFinite(parsedEpisode) && parsedEpisode >= 1 ? Math.floor(parsedEpisode) : 1;
 
   const movieQuery = useMovieDetails(mediaType === 'movie' ? numericId : 0);
   const tvQuery = useTVDetails(mediaType === 'tv' ? numericId : 0);
   const { data: seasonData } = useTVSeasonDetails(
     mediaType === 'tv' ? numericId : 0,
-    activeSeason
+    season
   );
 
   const imdbId: string | null =
     mediaType === 'movie'
       ? movieQuery.data?.imdb_id || movieQuery.data?.external_ids?.imdb_id || null
       : tvQuery.data?.external_ids?.imdb_id || null;
+
+  const imdbIdRef = useRef<string | null>(imdbId);
+  const routeGenerationRef = useRef<number>(0);
+
+  useEffect(() => {
+    imdbIdRef.current = imdbId;
+  }, [imdbId]);
+
+  useEffect(() => {
+    routeGenerationRef.current += 1;
+    const currentGen = routeGenerationRef.current;
+    return () => {
+      if (routeGenerationRef.current === currentGen) {
+        routeGenerationRef.current += 1;
+      }
+    };
+  }, [mediaType, numericId, season, episode]);
 
   const providers = getProviders(imdbId);
 
@@ -78,12 +111,22 @@ export function WatchPage() {
     ? selectedProvider
     : getDefaultProvider(imdbId);
 
+  const isDefaultMirror = activeProvider.id === PROVIDER_IDS.VIDLINK;
+
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const currentEpisodeRef = useRef<HTMLAnchorElement | null>(null);
+  const episodeListRef = useRef<HTMLDivElement | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenNote, setFullscreenNote] = useState<string | null>(null);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+  const [iframeError, setIframeError] = useState<IframeErrorReason | null>(null);
   const [activeIframeKey, setActiveIframeKey] = useState<number>(0);
+  const [probeRetryCount, setProbeRetryCount] = useState<number>(0);
+  const [serverStatuses, setServerStatuses] = useState<Record<string, MirrorStatus>>(() =>
+    Object.fromEntries(providers.map((p) => [p.id, 'checking' as const]))
+  );
+
   const setColorsFromImage = useAmbientStore((s) => s.setColorsFromImage);
 
   const title = mediaType === 'movie' ? movieQuery.data?.title : tvQuery.data?.name;
@@ -95,12 +138,100 @@ export function WatchPage() {
 
   const posterUrl = poster ? getPosterUrl(poster, 'w342') : null;
 
-  // Scroll current episode into view
+  const embedUrl =
+    mediaType === 'movie'
+      ? activeProvider.getMovieUrl(numericId, imdbId)
+      : activeProvider.getTVUrl(numericId, season, episode, imdbId);
+
+  const routeKey = `${mediaType}:${numericId}:${season}:${episode}`;
+  const [prevRouteKey, setPrevRouteKey] = useState(routeKey);
+  if (prevRouteKey !== routeKey) {
+    setPrevRouteKey(routeKey);
+    setServerStatuses(
+      Object.fromEntries(providers.map((p) => [p.id, 'checking' as const]))
+    );
+    setIsIframeLoading(true);
+    setIframeError(null);
+  }
+
+  const [prevEmbedUrl, setPrevEmbedUrl] = useState(embedUrl);
+  if (prevEmbedUrl !== embedUrl) {
+    setPrevEmbedUrl(embedUrl);
+    setIsIframeLoading(true);
+    setIframeError(null);
+  }
+
+  const allMirrorsFailed =
+    providers.length > 0 &&
+    providers.every((p) => serverStatuses[p.id] === 'failed');
+
+  const hasAlternateMirror = providers.some(
+    (p) => p.id !== activeProvider.id && serverStatuses[p.id] !== 'failed'
+  );
+
+  // Passive connectivity check for mirror availability UI (never auto-changes selection)
   useEffect(() => {
-    if (currentEpisodeRef.current) {
-      currentEpisodeRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    let cancelled = false;
+    const currentProviders = getProviders(imdbIdRef.current);
+
+    void Promise.all(
+      currentProviders.map(async (provider) => {
+        const testUrl =
+          mediaType === 'movie'
+            ? provider.getMovieUrl(numericId, imdbIdRef.current)
+            : provider.getTVUrl(numericId, season, episode, imdbIdRef.current);
+
+        const isOnline = await testServerConnectivity(testUrl, MIRROR_PROBE_TIMEOUT_MS);
+        if (cancelled) return false;
+
+        setServerStatuses((prev) => ({
+          ...prev,
+          [provider.id]: isOnline ? 'online' : 'failed',
+        }));
+        return isOnline;
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      if (results.length > 0 && results.every((ok) => !ok)) {
+        setIsIframeLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaType, numericId, season, episode, probeRetryCount]);
+
+  // 15000 ms timeout for active iframe load
+  useEffect(() => {
+    if (!isIframeLoading || allMirrorsFailed || iframeError !== null) {
+      return;
     }
-  }, [episode, activeSeason]);
+
+    const timeoutId = window.setTimeout(() => {
+      setIsIframeLoading(false);
+      setIframeError('timeout');
+      setServerStatuses((prev) => ({
+        ...prev,
+        [activeProvider.id]: 'failed',
+      }));
+    }, IFRAME_LOAD_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isIframeLoading, allMirrorsFailed, iframeError, activeProvider.id, activeIframeKey, embedUrl]);
+
+  // Scroll current episode into view when episode, season, or fetched episodes update
+  useEffect(() => {
+    const epEl = currentEpisodeRef.current;
+    const listEl = episodeListRef.current;
+    if (!epEl || !listEl) return;
+
+    const epRect = epEl.getBoundingClientRect();
+    const listRect = listEl.getBoundingClientRect();
+    if (listRect.height === 0 || epRect.top < listRect.top || epRect.bottom > listRect.bottom) {
+      epEl.scrollIntoView({ block: 'nearest' });
+    }
+  }, [episode, season, seasonData]);
 
   // Sample ambient color from media artwork
   useEffect(() => {
@@ -114,23 +245,40 @@ export function WatchPage() {
     }
   }, [backdrop, poster, setColorsFromImage]);
 
-  // Fullscreen change listener
+  // Fullscreen change & error listeners scoped strictly to playerContainerRef
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const scopedFullscreen =
+        playerContainerRef.current !== null &&
+        document.fullscreenElement === playerContainerRef.current;
+      setIsFullscreen(scopedFullscreen);
+      if (scopedFullscreen) {
+        setFullscreenNote(null);
+      }
+    };
+
+    const handleFullscreenError = () => {
+      setIsFullscreen(false);
+      setFullscreenNote(
+        'Fullscreen is unavailable in this browser or context. Try the fullscreen button inside the video player.'
+      );
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('fullscreenerror', handleFullscreenError);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('fullscreenerror', handleFullscreenError);
+    };
   }, []);
 
-  // PostMessage auto-next for VidLink
+  // PostMessage auto-next for VidLink (Mirror 1 only)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== 'https://vidlink.pro') return;
 
       if (event.data && event.data.type === 'ended') {
-        if (autoNext && mediaType === 'tv' && seasonData && tvQuery.data) {
+        if (autoNext && isDefaultMirror && mediaType === 'tv' && seasonData && tvQuery.data) {
           let nextSeason = season;
           let nextEpisode = episode + 1;
 
@@ -152,49 +300,151 @@ export function WatchPage() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [autoNext, mediaType, season, episode, seasonData, tvQuery.data, numericId, navigate]);
+  }, [autoNext, isDefaultMirror, mediaType, season, episode, seasonData, tvQuery.data, numericId, navigate]);
 
-  const embedUrl =
-    mediaType === 'movie'
-      ? activeProvider.getMovieUrl(numericId, imdbId)
-      : activeProvider.getTVUrl(numericId, season, episode, imdbId);
+  // Scoped Fullscreen (player container only, no documentElement fallback)
+  const toggleFullscreen = async () => {
+    const container = playerContainerRef.current;
+    if (!container) return;
 
-  // Scoped Fullscreen
-  const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      if (playerContainerRef.current) {
-        playerContainerRef.current.requestFullscreen().catch(() => {
-          document.documentElement.requestFullscreen();
-        });
+      if (typeof container.requestFullscreen !== 'function') {
+        setFullscreenNote(
+          'Fullscreen is not supported in this browser. Try the fullscreen button inside the video player.'
+        );
+        return;
       }
-    } else {
-      document.exitFullscreen().catch(() => {});
+      try {
+        await container.requestFullscreen();
+        setFullscreenNote(null);
+      } catch {
+        setIsFullscreen(false);
+        setFullscreenNote(
+          'Fullscreen could not be activated for the player container. Try the fullscreen button inside the video player.'
+        );
+      }
+    } else if (typeof document.exitFullscreen === 'function') {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        setIsFullscreen(document.fullscreenElement === container);
+      }
     }
   };
 
   const handleManualServerSelect = useCallback((provider: EmbedSource) => {
     setSelectedProvider(provider);
     localStorage.setItem('cinebai_preferred_provider', provider.id);
+    setIframeError(null);
     setIsIframeLoading(true);
     setActiveIframeKey((k) => k + 1);
   }, []);
 
   const switchToNextServer = useCallback(() => {
     const currentIndex = providers.findIndex((p) => p.id === activeProvider.id);
-    const nextIndex = (currentIndex + 1) % providers.length;
-    handleManualServerSelect(providers[nextIndex]);
-  }, [providers, activeProvider.id, handleManualServerSelect]);
+    if (currentIndex === -1) return;
+
+    for (let offset = 1; offset <= providers.length; offset += 1) {
+      const candidate = providers[(currentIndex + offset) % providers.length];
+      if (serverStatuses[candidate.id] !== 'failed' && candidate.id !== activeProvider.id) {
+        handleManualServerSelect(candidate);
+        return;
+      }
+    }
+  }, [providers, activeProvider.id, serverStatuses, handleManualServerSelect]);
 
   const reloadCurrentServer = useCallback(() => {
+    const targetProvider = activeProvider;
+    const expectedGen = routeGenerationRef.current;
+    const probeUrl =
+      mediaType === 'movie'
+        ? targetProvider.getMovieUrl(numericId, imdbId)
+        : targetProvider.getTVUrl(numericId, season, episode, imdbId);
+
+    setIframeError(null);
     setIsIframeLoading(true);
     setActiveIframeKey((k) => k + 1);
+    setServerStatuses((prev) => ({
+      ...prev,
+      [targetProvider.id]: 'checking',
+    }));
+
+    void testServerConnectivity(probeUrl, MIRROR_PROBE_TIMEOUT_MS).then((isOnline) => {
+      if (routeGenerationRef.current !== expectedGen) return;
+      setServerStatuses((prev) => ({
+        ...prev,
+        [targetProvider.id]: isOnline ? 'online' : 'failed',
+      }));
+    });
+  }, [activeProvider, mediaType, numericId, season, episode, imdbId]);
+
+  const retryAllMirrors = useCallback(() => {
+    setServerStatuses(
+      Object.fromEntries(providers.map((p) => [p.id, 'checking' as const]))
+    );
+    setIframeError(null);
+    setIsIframeLoading(true);
+    setActiveIframeKey((k) => k + 1);
+    setProbeRetryCount((c) => c + 1);
+  }, [providers]);
+
+  const handleCancelLoad = useCallback(() => {
+    setIsIframeLoading(false);
+    setIframeError('cancelled');
   }, []);
 
-  // Keyboard shortcut 's' / 'S' to cycle servers quickly
+  const handleIframeLoad = useCallback(() => {
+    setIsIframeLoading(false);
+  }, []);
+
+  const handleIframeError = useCallback(() => {
+    setIsIframeLoading(false);
+    setIframeError('error');
+    setServerStatuses((prev) => ({
+      ...prev,
+      [activeProvider.id]: 'failed',
+    }));
+  }, [activeProvider.id]);
+
+  // Keyboard shortcuts: 'Esc' exits scoped fullscreen; 's'/'S' cycles mirrors
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (
+        e.key === 'Escape' &&
+        playerContainerRef.current !== null &&
+        document.fullscreenElement === playerContainerRef.current &&
+        typeof document.exitFullscreen === 'function'
+      ) {
+        document.exitFullscreen().catch(() => {});
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const isExcludedElement = (el: HTMLElement | null): boolean => {
+        if (!el) return false;
+        const tag = el.tagName?.toUpperCase();
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          tag === 'BUTTON' ||
+          el.isContentEditable
+        ) {
+          return true;
+        }
+        return Boolean(
+          typeof el.closest === 'function' &&
+            el.closest('button, select, input, textarea, [contenteditable="true"]')
+        );
+      };
+
+      const target = e.target as HTMLElement | null;
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (isExcludedElement(target) || isExcludedElement(activeEl)) {
+        return;
+      }
+
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         switchToNextServer();
@@ -204,6 +454,18 @@ export function WatchPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [switchToNextServer]);
+
+  const activeStatus: MirrorStatus = serverStatuses[activeProvider.id] ?? 'checking';
+  const showMirrorError =
+    !allMirrorsFailed &&
+    (iframeError !== null || (!isIframeLoading && activeStatus === 'failed'));
+
+  const mirrorErrorHeading =
+    iframeError === 'cancelled'
+      ? `Stopped loading ${activeProvider.name}`
+      : iframeError === 'timeout'
+      ? `${activeProvider.name} timed out`
+      : `${activeProvider.name} is unavailable`;
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-base text-text-primary">
@@ -215,20 +477,20 @@ export function WatchPage() {
       />
 
       {/* Top Header Bar */}
-      <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 bg-bg-surface/90 border-b border-border-default backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-2 px-4 sm:px-6 py-3 bg-bg-surface/90 border-b border-border-default backdrop-blur-md">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Link
             to={`/${mediaType}/${numericId}`}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md py-1 px-2 min-h-[44px]"
-            aria-label="Back to details page"
+            className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-md py-1 px-2 min-h-[44px]"
+            aria-label="Back to Details"
           >
             <ArrowLeft size={16} aria-hidden="true" />
-            <span className="hidden sm:inline">Back to Details</span>
+            <span>Back to Details</span>
           </Link>
 
-          <div className="h-4 w-px bg-border-default" aria-hidden="true" />
+          <div className="h-4 w-px bg-border-default shrink-0" aria-hidden="true" />
 
-          <p className="text-sm font-semibold text-text-primary truncate max-w-xs md:max-w-md">
+          <p className="min-w-0 truncate text-sm font-semibold text-text-primary">
             {title}
             {mediaType === 'tv' && (
               <span className="text-accent font-bold"> (S{season} : E{episode})</span>
@@ -236,12 +498,36 @@ export function WatchPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Quick status indicator */}
           <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-white/5 border border-border-default px-3 py-1 text-xs text-text-secondary">
-            <CheckCircle2 size={13} className="text-success" aria-hidden="true" />
+            {allMirrorsFailed || showMirrorError ? (
+              <AlertCircle size={13} className="text-error shrink-0" aria-hidden="true" />
+            ) : activeStatus === 'online' && !isIframeLoading ? (
+              <CheckCircle2 size={13} className="text-success shrink-0" aria-hidden="true" />
+            ) : (
+              <Loader2
+                size={13}
+                className="text-accent animate-spin motion-reduce:animate-none shrink-0"
+                aria-hidden="true"
+              />
+            )}
             <span>
-              Server: <strong className="text-accent font-semibold">{activeProvider.name}</strong>
+              Server:{' '}
+              <strong className="text-accent font-semibold">{activeProvider.name}</strong>{' '}
+              <span className="text-text-secondary">
+                (
+                {allMirrorsFailed
+                  ? 'Unavailable'
+                  : iframeError === 'cancelled'
+                  ? 'Cancelled'
+                  : iframeError === 'timeout'
+                  ? 'Timed out'
+                  : isIframeLoading && activeStatus === 'failed'
+                  ? 'Checking…'
+                  : getStatusLabel(activeStatus)}
+                )
+              </span>
             </span>
           </div>
 
@@ -269,7 +555,7 @@ export function WatchPage() {
               className="mb-4 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-xs sm:text-sm text-text-primary relative"
             >
               <AlertCircle className="mt-0.5 shrink-0 text-warning" size={18} aria-hidden="true" />
-              <div className="pr-8 leading-relaxed">
+              <div className="pr-10 leading-relaxed">
                 <strong className="text-warning font-semibold block mb-0.5">
                   Recommendation: Use an Adblocker
                 </strong>
@@ -281,7 +567,7 @@ export function WatchPage() {
               <button
                 type="button"
                 onClick={dismissAdblockBanner}
-                className="absolute top-3 right-3 p-1.5 text-text-muted hover:text-text-primary transition-colors cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="absolute top-2 right-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-label="Dismiss banner"
               >
                 <X size={16} aria-hidden="true" />
@@ -294,30 +580,141 @@ export function WatchPage() {
             ref={playerContainerRef}
             className="relative aspect-video w-full overflow-hidden rounded-lg bg-black border border-border-default shadow-2xl"
           >
-            {/* Seamless subtle loading overlay while iframe initializes */}
-            {isIframeLoading && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-none transition-opacity duration-300">
-                <Loader2 size={38} className="text-accent animate-spin motion-reduce:animate-none mb-3" aria-hidden="true" />
-                <p className="text-sm font-semibold text-text-primary">
-                  Connecting to {activeProvider.name}...
+            {allMirrorsFailed ? (
+              <div
+                role="alert"
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg-surface/95 p-6 text-center"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/15 border border-error/30 text-error mb-3">
+                  <AlertCircle size={24} aria-hidden="true" />
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-text-primary">
+                  All streaming mirrors failed to load
+                </h2>
+                <p className="mt-1.5 text-xs sm:text-sm text-text-secondary max-w-md">
+                  None of the streaming mirrors responded. Check your connection or adblocker settings, or retry below.
                 </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  Loading streaming mirror stream
-                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={retryAllMirrors}
+                    className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-accent text-on-accent hover:bg-accent-light px-4 py-2 text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <RefreshCw size={14} aria-hidden="true" />
+                    <span>Retry</span>
+                  </button>
+                  <Link
+                    to={`/${mediaType}/${numericId}`}
+                    className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-white/10 hover:bg-white/15 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <ArrowLeft size={14} aria-hidden="true" />
+                    <span>Back to Details</span>
+                  </Link>
+                </div>
               </div>
-            )}
+            ) : showMirrorError ? (
+              <div
+                role="alert"
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg-surface/95 p-6 text-center"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/15 border border-error/30 text-error mb-3">
+                  <AlertCircle size={24} aria-hidden="true" />
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-text-primary">
+                  {mirrorErrorHeading}
+                </h2>
+                <p className="mt-1.5 text-xs sm:text-sm text-text-secondary max-w-md">
+                  You can retry this mirror, pick another mirror below, or return to details.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={reloadCurrentServer}
+                    className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-accent text-on-accent hover:bg-accent-light px-4 py-2 text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <RefreshCw size={14} aria-hidden="true" />
+                    <span>Retry</span>
+                  </button>
+                  {hasAlternateMirror && (
+                    <button
+                      type="button"
+                      onClick={switchToNextServer}
+                      className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-white/10 hover:bg-white/15 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <FastForward size={14} aria-hidden="true" />
+                      <span>Next Mirror</span>
+                    </button>
+                  )}
+                  <Link
+                    to={`/${mediaType}/${numericId}`}
+                    className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 border border-border-default px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <ArrowLeft size={14} aria-hidden="true" />
+                    <span>Back to Details</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                {isIframeLoading && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-4 text-center transition-opacity duration-300">
+                    <Loader2 size={38} className="text-accent animate-spin motion-reduce:animate-none mb-3" aria-hidden="true" />
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      className="text-sm font-semibold text-text-primary"
+                    >
+                      Connecting to {activeProvider.name}...
+                    </p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      Waiting for embed stream to respond.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCancelLoad}
+                      className="mt-4 min-h-[44px] inline-flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 border border-border-default px-4 py-2 text-xs font-semibold text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
 
-            <iframe
-              key={activeIframeKey}
-              src={embedUrl}
-              className="absolute inset-0 h-full w-full border-0"
-              referrerPolicy="origin"
-              allowFullScreen
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              title={`${title || 'Video Player'} - ${activeProvider.name}`}
-              onLoad={() => setIsIframeLoading(false)}
-            />
+                <iframe
+                  key={activeIframeKey}
+                  src={embedUrl}
+                  className="absolute inset-0 h-full w-full border-0"
+                  referrerPolicy="origin"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  title={`${title || 'Video Player'} - ${activeProvider.name}`}
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </>
+            )}
           </div>
+
+          {/* Inline Fullscreen Failure Note */}
+          {fullscreenNote && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-3 flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-text-primary"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertCircle size={15} className="text-warning shrink-0" aria-hidden="true" />
+                <span>{fullscreenNote}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFullscreenNote(null)}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shrink-0"
+                aria-label="Dismiss fullscreen note"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            </div>
+          )}
 
           {/* Instant Server Switcher & Mirror Selector Toolbar */}
           <div className="mt-5 rounded-lg bg-bg-surface border border-border-default p-5 shadow-md">
@@ -327,12 +724,9 @@ export function WatchPage() {
                   <span className="text-xs font-bold uppercase tracking-wider text-accent">
                     Streaming Mirrors:
                   </span>
-                  <span className="text-xs text-text-secondary hidden sm:inline">
-                    (Select any server if video stalls)
-                  </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={reloadCurrentServer}
@@ -346,34 +740,60 @@ export function WatchPage() {
                   <button
                     type="button"
                     onClick={switchToNextServer}
-                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    disabled={!hasAlternateMirror}
+                    aria-disabled={!hasAlternateMirror || undefined}
+                    className={`min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      hasAlternateMirror
+                        ? 'bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 cursor-pointer'
+                        : 'bg-white/5 border border-border-subtle text-text-disabled opacity-60 cursor-not-allowed'
+                    }`}
                     title="Switch to next mirror (Shortcut: S)"
                   >
                     <FastForward size={14} aria-hidden="true" />
-                    <span>Next Mirror <kbd className="ml-1 text-[10px] font-mono opacity-70 bg-white/10 px-1 py-0.5 rounded">S</kbd></span>
+                    <span>Next Mirror <kbd className="ml-1 text-[10px] font-mono opacity-80 bg-white/10 px-1 py-0.5 rounded">S</kbd></span>
                   </button>
 
-                  {/* Auto Next Toggle (TV Only) */}
+                  {/* Auto Next Toggle (TV Only, Mirror 1 only) */}
                   {mediaType === 'tv' && (
                     <button
                       type="button"
-                      onClick={() => setAutoNext(!autoNext)}
-                      className={`min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                        autoNext
-                          ? 'bg-success/20 border border-success/40 text-success font-bold'
-                          : 'bg-white/5 border border-border-default text-text-muted hover:text-text-secondary'
+                      onClick={() => {
+                        if (!isDefaultMirror) return;
+                        setAutoNext((prev) => !prev);
+                      }}
+                      disabled={!isDefaultMirror}
+                      aria-disabled={!isDefaultMirror || undefined}
+                      className={`min-h-[44px] inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        !isDefaultMirror
+                          ? 'bg-white/5 border border-border-subtle text-text-disabled opacity-60 cursor-not-allowed'
+                          : autoNext
+                          ? 'bg-success/20 border border-success/40 text-success font-bold cursor-pointer'
+                          : 'bg-white/5 border border-border-default text-text-muted hover:text-text-secondary cursor-pointer'
                       }`}
-                      aria-pressed={autoNext}
-                      title={autoNext ? 'Auto Play Next Episode: ON' : 'Auto Play Next Episode: OFF'}
+                      aria-pressed={isDefaultMirror ? autoNext : false}
+                      title={
+                        isDefaultMirror
+                          ? autoNext
+                            ? 'Auto Play Next Episode: ON'
+                            : 'Auto Play Next Episode: OFF'
+                          : 'Auto Next works on Mirror 1 (VidLink) only'
+                      }
                     >
                       <FastForward size={13} aria-hidden="true" />
-                      <span>Auto Next: {autoNext ? 'ON' : 'OFF'}</span>
+                      <span>
+                        Auto Next: {!isDefaultMirror ? 'Mirror 1 only' : autoNext ? 'ON' : 'OFF'}
+                      </span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Server Buttons with Badges */}
+              <p className="text-xs text-text-secondary">
+                If a server buffers or stops, try another mirror below or press{' '}
+                <strong className="text-text-primary">S</strong>.
+              </p>
+
+              {/* Server Buttons with Honest Status */}
               <div
                 role="radiogroup"
                 aria-label="Available streaming mirrors"
@@ -381,6 +801,9 @@ export function WatchPage() {
               >
                 {providers.map((provider) => {
                   const isSelected = provider.id === activeProvider.id;
+                  const status: MirrorStatus = serverStatuses[provider.id] ?? 'checking';
+                  const isFailed = status === 'failed';
+                  const statusLabel = getStatusLabel(status);
 
                   return (
                     <button
@@ -388,45 +811,66 @@ export function WatchPage() {
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
+                      disabled={isFailed}
+                      aria-disabled={isFailed || undefined}
                       onClick={() => handleManualServerSelect(provider)}
-                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                        isSelected
-                          ? 'bg-accent text-on-accent shadow-md'
-                          : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong hover:bg-white/10'
+                      className={`min-h-[44px] relative flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        isSelected && !isFailed
+                          ? 'bg-accent text-on-accent shadow-md cursor-pointer'
+                          : isFailed
+                          ? 'bg-white/5 border border-border-subtle text-text-muted opacity-60 cursor-not-allowed'
+                          : 'bg-white/5 border border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong hover:bg-white/10 cursor-pointer'
                       }`}
-                      aria-label={`${provider.name} - ${isSelected ? 'Active' : 'Switch to mirror'}`}
+                      aria-label={`${provider.name} - ${statusLabel}${isSelected ? ', Active' : ''}`}
                     >
-                      {isSelected ? (
-                        <CheckCircle2 size={14} className="text-on-accent shrink-0" aria-hidden="true" />
+                      {status === 'online' ? (
+                        <CheckCircle2
+                          size={14}
+                          className={isSelected ? 'text-on-accent shrink-0' : 'text-success shrink-0'}
+                          aria-hidden="true"
+                        />
+                      ) : status === 'failed' ? (
+                        <AlertCircle
+                          size={14}
+                          className="text-error shrink-0"
+                          aria-hidden="true"
+                        />
                       ) : (
-                        <Play size={12} className="text-text-muted shrink-0" aria-hidden="true" />
+                        <Loader2
+                          size={14}
+                          className={`animate-spin motion-reduce:animate-none shrink-0 ${
+                            isSelected ? 'text-on-accent' : 'text-text-muted'
+                          }`}
+                          aria-hidden="true"
+                        />
                       )}
 
                       <span>{provider.name}</span>
 
-                      {provider.badge && (
-                        <span
-                          className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
-                            isSelected
-                              ? 'bg-black/25 text-on-accent'
-                              : 'bg-accent/15 text-accent border border-accent/20'
-                          }`}
-                        >
-                          {provider.badge}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[11px] font-medium ${
+                          isSelected && !isFailed
+                            ? 'text-on-accent/90'
+                            : status === 'online'
+                            ? 'text-success'
+                            : status === 'failed'
+                            ? 'text-error'
+                            : 'text-text-secondary'
+                        }`}
+                      >
+                        ({statusLabel})
+                      </span>
                     </button>
                   );
                 })}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-text-secondary pt-2 border-t border-border-subtle gap-2">
-                <p className="flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-accent shrink-0" aria-hidden="true" />
-                  <span>
-                    All mirrors are connected. If a server buffers or stops, click any mirror above or press <strong className="text-text-primary">S</strong>.
-                  </span>
-                </p>
+                {mediaType === 'tv' ? (
+                  <p>Auto Next works on Mirror 1 (VidLink) only.</p>
+                ) : (
+                  <p>External embeds are hosted by third-party providers.</p>
+                )}
                 <p>
                   Active host: <strong className="text-text-secondary">{activeProvider.host}</strong>
                 </p>
@@ -435,24 +879,28 @@ export function WatchPage() {
           </div>
 
           {/* Media Info Section */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-6">
-            {/* Poster Thumbnail */}
-            {posterUrl && (
-              <div className="hidden sm:block w-32 md:w-40 flex-shrink-0">
+          <div className="mt-8 grid grid-cols-[7rem_minmax(0,1fr)] sm:grid-cols-[8rem_minmax(0,1fr)] md:grid-cols-[10rem_minmax(0,1fr)] gap-x-4 sm:gap-x-6 gap-y-3 items-start">
+            {/* Poster Thumbnail (w-28 on mobile, same pattern as Detail) */}
+            <div className="w-28 sm:w-32 md:w-40 aspect-[2/3] overflow-hidden rounded-lg border border-border-default shadow-md bg-poster-fallback flex-shrink-0 sm:row-span-2 relative">
+              {posterUrl ? (
                 <img
                   src={posterUrl}
                   alt=""
                   aria-hidden="true"
                   loading="lazy"
                   decoding="async"
-                  className="w-full aspect-[2/3] rounded-lg border border-border-default shadow-md object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="absolute inset-0 flex h-full w-full items-center justify-center p-2 text-center text-xs font-bold text-text-secondary">
+                  {title || 'CineBai'}
+                </div>
+              )}
+            </div>
 
-            {/* Semantic H1 for WatchPage */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-text-primary">
+            {/* Semantic H1 & Metadata for WatchPage */}
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-display tracking-tight text-text-primary">
                 {title}
               </h1>
 
@@ -474,13 +922,13 @@ export function WatchPage() {
                   {mediaType === 'movie' ? 'Movie' : 'TV Series'}
                 </span>
               </div>
-
-              {overview && (
-                <p className="mt-4 text-xs sm:text-sm leading-relaxed text-text-secondary line-clamp-3">
-                  {overview}
-                </p>
-              )}
             </div>
+
+            {overview && (
+              <p className="col-span-2 sm:col-span-1 sm:col-start-2 text-xs sm:text-sm leading-relaxed text-text-secondary line-clamp-3">
+                {overview}
+              </p>
+            )}
           </div>
         </div>
 
@@ -508,10 +956,10 @@ export function WatchPage() {
                     </label>
                     <select
                       id="season-select"
-                      value={activeSeason}
+                      value={season}
                       onChange={(e) => {
                         const newSeason = Number(e.target.value);
-                        setActiveSeason(newSeason);
+                        navigate(`/watch/tv/${numericId}?s=${newSeason}&e=1`);
                       }}
                       className="w-full appearance-none rounded-md bg-white/5 border border-border-default px-3 py-2 text-xs font-semibold text-text-primary focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer min-h-[44px]"
                     >
@@ -533,9 +981,9 @@ export function WatchPage() {
               </div>
 
               {/* Scrollable Episode List */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              <div ref={episodeListRef} className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {seasonData?.episodes?.map((ep) => {
-                  const isCurrent = activeSeason === season && ep.episode_number === episode;
+                  const isCurrent = ep.season_number === season && ep.episode_number === episode;
                   const thumbSrc = ep.still_path
                     ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
                     : posterUrl;
@@ -544,7 +992,7 @@ export function WatchPage() {
                     <Link
                       key={ep.id}
                       ref={isCurrent ? currentEpisodeRef : null}
-                      to={`/watch/tv/${numericId}?s=${activeSeason}&e=${ep.episode_number}`}
+                      to={`/watch/tv/${numericId}?s=${season}&e=${ep.episode_number}`}
                       aria-current={isCurrent ? 'true' : undefined}
                       className={`group flex items-center gap-3 rounded-md p-2 transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isCurrent
