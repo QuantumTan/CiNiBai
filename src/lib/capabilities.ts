@@ -7,6 +7,8 @@
  * Tier C (Lite): No backdrop-filter, low memory, prefers-reduced-transparency/motion (opaque obsidian #0c0e14).
  */
 
+import { create } from 'zustand';
+
 export type CapabilityTier = 'a' | 'b' | 'c';
 
 export interface SystemCapabilities {
@@ -17,13 +19,14 @@ export interface SystemCapabilities {
   reducedMotion: boolean;
   reducedTransparency: boolean;
   highContrast: boolean;
+  isDarkMode: boolean;
   deviceMemory: number;
   hardwareConcurrency: number;
 }
 
 let cachedCapabilities: SystemCapabilities | null = null;
 
-export function detectCapabilities(): SystemCapabilities {
+export function detectCapabilities(forceRefresh: boolean = false): SystemCapabilities {
   if (typeof window === 'undefined') {
     return {
       tier: 'b',
@@ -33,16 +36,18 @@ export function detectCapabilities(): SystemCapabilities {
       reducedMotion: false,
       reducedTransparency: false,
       highContrast: false,
+      isDarkMode: true,
       deviceMemory: 8,
       hardwareConcurrency: 8,
     };
   }
 
-  if (cachedCapabilities) return cachedCapabilities;
+  if (cachedCapabilities && !forceRefresh) return cachedCapabilities;
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const reducedTransparency = window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
   const highContrast = window.matchMedia('(prefers-contrast: more)').matches;
+  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   const supportsBackdropFilter =
     CSS.supports('backdrop-filter', 'blur(10px)') ||
@@ -79,19 +84,39 @@ export function detectCapabilities(): SystemCapabilities {
     reducedMotion,
     reducedTransparency,
     highContrast,
+    isDarkMode,
     deviceMemory,
     hardwareConcurrency,
   };
 
   // Mount dataset on root for CSS targeting
-  if (document.documentElement) {
+  if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.dataset.tier = tier;
-    if (reducedMotion) document.documentElement.dataset.reducedMotion = 'true';
-    if (reducedTransparency) document.documentElement.dataset.reducedTransparency = 'true';
-    if (highContrast) document.documentElement.dataset.highContrast = 'true';
+    document.documentElement.dataset.reducedMotion = reducedMotion ? 'true' : 'false';
+    document.documentElement.dataset.reducedTransparency = reducedTransparency ? 'true' : 'false';
+    document.documentElement.dataset.highContrast = highContrast ? 'true' : 'false';
+    document.documentElement.dataset.colorScheme = isDarkMode ? 'dark' : 'light';
   }
 
   return cachedCapabilities;
+}
+
+interface CapabilitiesStore {
+  capabilities: SystemCapabilities;
+  refresh: () => SystemCapabilities;
+}
+
+export const useCapabilitiesStore = create<CapabilitiesStore>()((set) => ({
+  capabilities: detectCapabilities(),
+  refresh: () => {
+    const updated = detectCapabilities(true);
+    set({ capabilities: updated });
+    return updated;
+  },
+}));
+
+export function useCapabilities(): SystemCapabilities {
+  return useCapabilitiesStore((s) => s.capabilities);
 }
 
 export function getCapabilities(): SystemCapabilities {

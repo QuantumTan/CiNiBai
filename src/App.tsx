@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { Layout } from './components/layout/Layout';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ScrollToTop } from './components/common/ScrollToTop';
-import { detectCapabilities } from './lib/capabilities';
+import { detectCapabilities, useCapabilitiesStore } from './lib/capabilities';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
 const BrowsePage = lazy(() => import('./pages/BrowsePage').then((m) => ({ default: m.BrowsePage })));
@@ -53,21 +53,24 @@ function App() {
     detectCapabilities();
 
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const transQuery = window.matchMedia('(prefers-reduced-transparency: reduce)');
+    const contrastQuery = window.matchMedia('(prefers-contrast: more)');
 
-    const updateAttrs = () => {
-      if (document.documentElement) {
-        document.documentElement.dataset.reducedMotion = motionQuery.matches ? 'true' : 'false';
-        document.documentElement.dataset.reducedTransparency = transQuery.matches ? 'true' : 'false';
-      }
+    const handleCapabilitiesChange = () => {
+      useCapabilitiesStore.getState().refresh();
     };
 
-    motionQuery.addEventListener('change', updateAttrs);
-    transQuery.addEventListener('change', updateAttrs);
+    motionQuery.addEventListener('change', handleCapabilitiesChange);
+    colorSchemeQuery.addEventListener('change', handleCapabilitiesChange);
+    transQuery.addEventListener('change', handleCapabilitiesChange);
+    contrastQuery.addEventListener('change', handleCapabilitiesChange);
 
     return () => {
-      motionQuery.removeEventListener('change', updateAttrs);
-      transQuery.removeEventListener('change', updateAttrs);
+      motionQuery.removeEventListener('change', handleCapabilitiesChange);
+      colorSchemeQuery.removeEventListener('change', handleCapabilitiesChange);
+      transQuery.removeEventListener('change', handleCapabilitiesChange);
+      contrastQuery.removeEventListener('change', handleCapabilitiesChange);
     };
   }, []);
 

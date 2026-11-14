@@ -35,19 +35,18 @@ export const useWatchlistStore = create<WatchlistState>()(
         const exists = currentItems.some((i) => i.id === item.id && i.type === item.type);
 
         if (exists) {
-          // No-op for duplicates with aria-live confirmation
-          set({ lastAnnouncement: `"${item.title}" is already in your watchlist.` });
+          // Silent dedup for items already present
           return false;
         }
 
-        // Oldest-first eviction: keep most recent (MAX_WATCHLIST_ITEMS - 1) before prepending new item
-        const trimmed =
-          currentItems.length >= MAX_WATCHLIST_ITEMS
-            ? currentItems.slice(0, MAX_WATCHLIST_ITEMS - 1)
-            : currentItems;
+        // Hard cap at 500 items: reject 501st item with exact honest copy
+        if (currentItems.length >= MAX_WATCHLIST_ITEMS) {
+          set({ lastAnnouncement: 'Watchlist is full (500 titles)' });
+          return false;
+        }
 
         set({
-          items: [{ ...item, addedAt: Date.now() }, ...trimmed],
+          items: [{ ...item, addedAt: Date.now() }, ...currentItems],
           lastAnnouncement: `Added "${item.title}" to your watchlist.`,
         });
         return true;

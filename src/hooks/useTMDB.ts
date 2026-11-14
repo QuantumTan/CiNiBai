@@ -201,18 +201,6 @@ export function useWatchProviders(mediaType: 'movie' | 'tv', id: number) {
 }
 
 // --- Search ---
-export function useSearchMulti(query: string, delay: number = 300) {
-  const trimmed = query.trim();
-  const debounced = useDebounce(trimmed, delay);
-
-  return useQuery({
-    queryKey: ['search', debounced],
-    queryFn: () => searchMulti(debounced),
-    staleTime: STALE_TIMES.search,
-    enabled: debounced.length >= 2,
-  });
-}
-
 export function useInfiniteSearchMulti(query: string, delay: number = 300) {
   const trimmed = query.trim();
   const debounced = useDebounce(trimmed, delay);

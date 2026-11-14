@@ -17,6 +17,16 @@ const DEFAULT_MESH: RGBColor[] = [
   { r: 28, g: 16, b: 24 },
 ];
 
+/**
+ * Note on Volume Persistence (Phase 2b technical blocker):
+ * Player volume cannot be persisted because the custom player store (src/stores/player.ts)
+ * and player component (src/components/player/LiquidVideoPlayer.tsx) were deleted in
+ * Prompt 3 Branch B (commit a0ae588). The active playback pipeline in src/pages/WatchPage.tsx:539-553
+ * mounts third-party cross-origin <iframe> embeds (VidLink, Embed.su, Vidsrc) where browser
+ * cross-origin security prevents parent window script from inspecting or controlling internal media volume.
+ * Per prompt instructions ("do not invent a file that does not exist", "LiquidVideoPlayer as the single player file
+ * (do not wire or delete it in this prompt)"), no separate player store is created.
+ */
 export const useAmbientStore = create<AmbientState>()(
   persist(
     (set) => ({
@@ -51,6 +61,7 @@ export const useAmbientStore = create<AmbientState>()(
     }),
     {
       name: 'cinebai-ambient',
+      version: 1,
       partialize: (state) => ({ ambilightEnabled: state.ambilightEnabled }),
     }
   )

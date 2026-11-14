@@ -30,7 +30,7 @@ describe('src/stores/watchlistStore.ts', () => {
       );
     });
 
-    it('deduplicates identical items (same item added twice -> 1 item in store)', () => {
+    it('deduplicates identical items silently (same item added twice -> 1 item in store)', () => {
       const item = {
         id: 202,
         type: 'movie' as const,
@@ -53,9 +53,9 @@ describe('src/stores/watchlistStore.ts', () => {
       expect(items).toHaveLength(1);
       expect(items[0].id).toBe(202);
 
-      // Confirm polite notification for duplicate
+      // Confirm announcement remains from the initial addition (dedup is silent)
       expect(useWatchlistStore.getState().lastAnnouncement).toBe(
-        '"Interstellar" is already in your watchlist.'
+        'Added "Interstellar" to your watchlist.'
       );
     });
 
@@ -104,8 +104,8 @@ describe('src/stores/watchlistStore.ts', () => {
     });
   });
 
-  describe('FIFO capacity limit (500 items max)', () => {
-    it('evicts oldest items when capacity reaches 500', () => {
+  describe('Capacity limit (500 items max)', () => {
+    it('rejects 501st item with exact copy "Watchlist is full (500 titles)"', () => {
       // Pre-fill with 500 items
       for (let i = 1; i <= 500; i++) {
         useWatchlistStore.getState().addItem({
@@ -119,12 +119,11 @@ describe('src/stores/watchlistStore.ts', () => {
       }
 
       expect(useWatchlistStore.getState().items).toHaveLength(500);
-      // Newest addition was Movie 500 at index 0, oldest is Movie 1 at index 499
       expect(useWatchlistStore.getState().items[0].id).toBe(500);
       expect(useWatchlistStore.getState().items[499].id).toBe(1);
 
-      // Add item 501
-      useWatchlistStore.getState().addItem({
+      // Attempt to add 501st item
+      const added = useWatchlistStore.getState().addItem({
         id: 501,
         type: 'movie',
         title: 'Movie 501',
@@ -133,11 +132,19 @@ describe('src/stores/watchlistStore.ts', () => {
         releaseDate: '2020-01-01',
       });
 
-      const updated = useWatchlistStore.getState().items;
-      expect(updated).toHaveLength(500);
-      expect(updated[0].id).toBe(501);
-      // Movie 1 should have been evicted
-      expect(useWatchlistStore.getState().isInWatchlist(1, 'movie')).toBe(false);
+      // Must be rejected
+      expect(added).toBe(false);
+      const itemsAfter = useWatchlistStore.getState().items;
+      expect(itemsAfter).toHaveLength(500);
+      // Movie 1 should NOT be evicted
+      expect(useWatchlistStore.getState().isInWatchlist(1, 'movie')).toBe(true);
+      // Movie 501 must NOT be added
+      expect(useWatchlistStore.getState().isInWatchlist(501, 'movie')).toBe(false);
+
+      // Exact copy requirement
+      expect(useWatchlistStore.getState().lastAnnouncement).toBe(
+        'Watchlist is full (500 titles)'
+      );
     });
   });
 

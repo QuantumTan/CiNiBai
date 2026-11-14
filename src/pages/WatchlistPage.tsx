@@ -101,6 +101,17 @@ export function WatchlistPage() {
         )}
       </div>
 
+      {/* Capacity Alert Banner */}
+      {(items.length >= 500 || lastAnnouncement === 'Watchlist is full (500 titles)') && (
+        <div
+          role="alert"
+          className="mb-6 flex items-center gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-medium text-accent"
+        >
+          <AlertTriangle size={18} className="shrink-0 text-accent" aria-hidden="true" />
+          <span>Watchlist is full (500 titles)</span>
+        </div>
+      )}
+
       {/* Clear Confirmation Dialog */}
       {showClearConfirm && (
         <div
