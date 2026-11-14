@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Compass, Film, Tv, Sparkles, Bookmark, Search } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MiniPlayerBadge } from './MiniPlayerBadge';
 import { spring, useSpatialMotion } from '../../lib/motion';
 import { useWatchlistStore } from '../../stores/watchlistStore';
 
@@ -58,38 +57,67 @@ export function FloatingDock() {
     { to: '/watchlist', label: 'Watchlist', icon: Bookmark, badge: watchlistCount },
   ];
 
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [mobileFocusedIndex, setMobileFocusedIndex] = useState(0);
+  const [desktopFocusedIndex, setDesktopFocusedIndex] = useState(0);
+  const mobileLinkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const desktopLinkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
-  // Keyboard Roving Tabindex Handler
-  const handleKeyDown = (e: React.KeyboardEvent, tabs: DockTab[]) => {
+  // Roving tabindex navigation scoped per nav so mobile (5) and desktop (6) stay independent.
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLElement>,
+    tabs: DockTab[],
+    focusedIndex: number,
+    setFocusedIndex: (index: number) => void,
+    linkRefs: React.RefObject<(HTMLAnchorElement | null)[]>
+  ) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || tabs.length === 0) return;
+
+    const activeIndex = linkRefs.current.findIndex((el) => el === document.activeElement);
+    const currentIndex =
+      activeIndex !== -1 ? activeIndex : Math.min(Math.max(focusedIndex, 0), tabs.length - 1);
+
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev + 1) % tabs.length);
+      const nextIndex = (currentIndex + 1) % tabs.length;
+      setFocusedIndex(nextIndex);
+      linkRefs.current[nextIndex]?.focus();
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      setFocusedIndex((prev) => (prev - 1 + tabs.length) % tabs.length);
+      const nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      setFocusedIndex(nextIndex);
+      linkRefs.current[nextIndex]?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setFocusedIndex(0);
+      linkRefs.current[0]?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      const lastIndex = tabs.length - 1;
+      setFocusedIndex(lastIndex);
+      linkRefs.current[lastIndex]?.focus();
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      navigate(tabs[focusedIndex].to);
+      const targetTab = tabs[currentIndex];
+      if (targetTab) {
+        navigate(targetTab.to);
+      }
     }
   };
 
   return (
     <>
-      {/* ─────────────────────────────────────────────────────────────
-          1. Mobile Bottom Dock (< md)
-          Home / Movies / TV / Search / Watchlist
-          Visible labels, min-h-[44px], safe-area padding
-      ───────────────────────────────────────────────────────────── */}
+      {/* Mobile bottom dock (< md): Home / Movies / TV / Search / Watchlist */}
       <nav
         role="navigation"
         aria-label="Mobile Navigation"
-        onKeyDown={(e) => handleKeyDown(e, mobileTabs)}
+        onKeyDown={(e) =>
+          handleKeyDown(e, mobileTabs, mobileFocusedIndex, setMobileFocusedIndex, mobileLinkRefs)
+        }
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-1.5 pointer-events-none"
       >
         <div className="pointer-events-auto mx-auto max-w-md bg-bg-elevated/95 backdrop-blur-xl border border-border-default rounded-2xl flex items-center justify-around px-2 py-1 shadow-lg">
@@ -100,8 +128,12 @@ export function FloatingDock() {
             return (
               <Link
                 key={tab.to}
+                ref={(el) => {
+                  mobileLinkRefs.current[idx] = el;
+                }}
                 to={tab.to}
-                tabIndex={idx === focusedIndex ? 0 : -1}
+                tabIndex={idx === mobileFocusedIndex ? 0 : -1}
+                onFocus={() => setMobileFocusedIndex(idx)}
                 aria-current={active ? 'page' : undefined}
                 className={`relative flex flex-col items-center justify-center min-h-[44px] min-w-[48px] px-2 py-1 rounded-xl text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   active ? 'text-accent' : 'text-text-muted hover:text-text-secondary'
@@ -137,14 +169,13 @@ export function FloatingDock() {
         </div>
       </nav>
 
-      {/* ─────────────────────────────────────────────────────────────
-          2. Desktop visionOS Spatial Liquid Glass Dock (>= md)
-          Visible labels, 44px targets, roving tabindex, safe-area
-      ───────────────────────────────────────────────────────────── */}
+      {/* Desktop spatial dock (>= md) */}
       <nav
         role="navigation"
         aria-label="Spatial Dock"
-        onKeyDown={(e) => handleKeyDown(e, desktopTabs)}
+        onKeyDown={(e) =>
+          handleKeyDown(e, desktopTabs, desktopFocusedIndex, setDesktopFocusedIndex, desktopLinkRefs)
+        }
         className="hidden md:flex fixed bottom-6 left-0 right-0 z-40 justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)]"
       >
         <div className="pointer-events-auto flex items-center gap-3">
@@ -161,8 +192,12 @@ export function FloatingDock() {
               return (
                 <Link
                   key={tab.to}
+                  ref={(el) => {
+                    desktopLinkRefs.current[idx] = el;
+                  }}
                   to={tab.to}
-                  tabIndex={idx === focusedIndex ? 0 : -1}
+                  tabIndex={idx === desktopFocusedIndex ? 0 : -1}
+                  onFocus={() => setDesktopFocusedIndex(idx)}
                   aria-current={active ? 'page' : undefined}
                   aria-label={tab.label}
                   title={tab.label}
@@ -178,9 +213,6 @@ export function FloatingDock() {
               );
             })}
           </motion.div>
-
-          {/* Mini-Player Badge Slot */}
-          <MiniPlayerBadge />
         </div>
       </nav>
     </>

@@ -1,10 +1,40 @@
 import { useRef, useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Star, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, TrendingUp, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '../ui/Skeleton';
 import { getPosterUrl } from '../../api/tmdb';
 import { getMediaDate, getYear, getMediaTitle, getMediaType, formatRating } from '../../lib/utils';
 import type { TMDBMediaItem } from '../../api/tmdb.types';
+
+function Top10Poster({ posterUrl, title }: { posterUrl: string; title: string }) {
+  const [hasError, setHasError] = useState(false);
+  const [prevPosterUrl, setPrevPosterUrl] = useState(posterUrl);
+
+  if (prevPosterUrl !== posterUrl) {
+    setPrevPosterUrl(posterUrl);
+    setHasError(false);
+  }
+
+  if (!posterUrl || hasError) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center p-3 text-center bg-poster-fallback text-text-secondary">
+        <Film size={28} className="mb-2 text-text-disabled" aria-hidden="true" />
+        <span className="text-xs font-semibold text-text-secondary line-clamp-2">{title}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={posterUrl}
+      alt={title}
+      className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover/top10:scale-105"
+      loading="lazy"
+      decoding="async"
+      onError={() => setHasError(true)}
+    />
+  );
+}
 
 interface Top10RowProps {
   title: string;
@@ -116,6 +146,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                 const itemTitle = getMediaTitle(item);
                 const releaseYear = getYear(getMediaDate(item));
                 const rating = item.vote_average ?? 0;
+                const posterUrl = getPosterUrl(item.poster_path, 'w342');
 
                 return (
                   <Link
@@ -137,13 +168,7 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
 
                       {/* Overlapping Poster Card */}
                       <div className="relative z-10 -ml-7 sm:-ml-9 md:-ml-12 w-32 sm:w-36 md:w-44 aspect-[2/3] overflow-hidden rounded-lg bg-poster-fallback border border-border-default shadow-xl flex-shrink-0 group-hover/top10:border-border-strong transition-colors">
-                        <img
-                          src={getPosterUrl(item.poster_path, 'w342')}
-                          alt={itemTitle}
-                          className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover/top10:scale-105"
-                          loading="lazy"
-                          decoding="async"
-                        />
+                        <Top10Poster posterUrl={posterUrl} title={itemTitle} />
 
                         {/* Rating Pill */}
                         {rating > 0 && (

@@ -25,13 +25,6 @@ export const springSnappy = {
   mass: 0.7,
 } as const;
 
-export const springScrubber = {
-  type: 'spring',
-  stiffness: 450,
-  damping: 25,
-  mass: 0.5,
-} as const;
-
 export const fadeTransition = {
   duration: 0.12,
   ease: [0.16, 1, 0.3, 1],
@@ -49,6 +42,5 @@ export function useSpatialMotion() {
     spring: isReduced ? fadeTransition : spring,
     springSoft: isReduced ? fadeTransition : springSoft,
     springSnappy: isReduced ? fadeTransition : springSnappy,
-    springScrubber: isReduced ? fadeTransition : springScrubber,
   };
 }

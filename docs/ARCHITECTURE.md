@@ -60,12 +60,6 @@ All state stores reside strictly in `src/stores/`:
 - FIFO item cap: Limits stored entries to **500 items**, silently evicting the oldest additions when exceeded.
 - Deduplication: Prevents duplicate entries and updates an `aria-live` announcement region to inform screen reader users.
 
-### `stores/player.ts`
-- Coordinates video player interface state (volume, active server, theater mode).
-- Clamps volume safely between `0.0` and `1.0`.
-- Chapters are derived exclusively from actual media tracks (defaults to empty array `[]` without invented placeholder timestamps).
-- Progress reflects authentic viewing timestamps without synthetic progress bars.
-
 ### `stores/ambient.ts`
 - Controls dynamic background ambient illumination canvas colors (`primary`, `secondary`, `accent`).
 - Persists user enable/disable preference in `localStorage`.
@@ -118,6 +112,6 @@ To prevent component duplication and fragmentation, the application enforces sin
 4. **Canvas (`src/components/ambient/AmbientCanvas.tsx`)**:
    - The sole ambient lighting system.
    - Dynamic fluid canvas that extracts dominant colors from posters and backdrops. Responsively scales blob radii (capped on mobile) and respects `prefers-reduced-motion`.
-5. **Player (`src/components/player/LiquidVideoPlayer.tsx` / `src/pages/WatchPage.tsx`)**:
+5. **Player (`src/pages/WatchPage.tsx`)**:
    - The sole media player container.
    - Standard `aspect-video` container, responsive server cycling (`s` key), and embed provider abstraction.

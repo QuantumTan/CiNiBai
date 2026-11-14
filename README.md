@@ -60,7 +60,6 @@ c:/Users/ACER/Desktop/CiNiBai/
 │   │   ├── common/              # SEO metadata & ErrorBoundary
 │   │   ├── home/                # CinematicHero & ContentRow rails
 │   │   ├── layout/              # FloatingDock, Navigation, & Footer
-│   │   ├── player/              # LiquidVideoPlayer component
 │   │   └── ui/                  # Accessible buttons, inputs, & skeleton loaders
 │   ├── hooks/                   # React Query data hooks (useTMDB)
 │   ├── lib/                     # Color math, image formatting, & device capabilities
@@ -76,7 +75,6 @@ c:/Users/ACER/Desktop/CiNiBai/
 │   │   └── WatchPage.tsx        # Player interface
 │   ├── stores/                  # Consolidated Zustand state stores
 │   │   ├── ambient.ts           # Dynamic illumination store
-│   │   ├── player.ts            # Player controls & progress state
 │   │   └── watchlistStore.ts    # Persisted watchlist store (capped at 500 items)
 │   ├── styles/                  # Apple-glass materials & hardware tier styles
 │   ├── App.tsx                  # Root layout, router, & Suspense fallbacks
