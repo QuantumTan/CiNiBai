@@ -24,13 +24,19 @@ export interface MovieCardProps {
 
 export function MovieCard({ item, size = 'auto', className = '' }: MovieCardProps) {
   const [imageError, setImageError] = useState(false);
+  const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
+
   const type = getMediaType(item);
+
+  // Never render a person result as a media card or link person id to /tv/ or /movie/
+  if (type === 'person') {
+    return null;
+  }
+
   const title = getMediaTitle(item);
   const year = getYear(getMediaDate(item));
   const rawRating = item.vote_average ?? 0;
   const ratingText = formatRating(rawRating);
-
-  const { addItem, removeItem, isInWatchlist } = useWatchlistStore();
   const inWatchlist = isInWatchlist(item.id, type);
 
   const hasPoster = Boolean(item.poster_path && typeof item.poster_path === 'string' && !item.poster_path.includes('undefined'));

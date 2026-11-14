@@ -7,6 +7,7 @@ import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows } from '../hooks/useTMDB';
 import { useAmbientStore } from '../stores/ambient';
 import { getPosterUrl, getTMDBErrorMessage, ANIME_GENRE_ID, JAPANESE_LANG } from '../api/tmdb';
+import { formatShowingCount } from '../lib/utils';
 
 export function AnimePage() {
   const [sortBy, setSortBy] = useState('popularity.desc');
@@ -88,7 +89,7 @@ export function AnimePage() {
           </p>
           {allItems.length > 0 && !isLoading && (
             <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary" aria-live="polite">
-              {allItems.length.toLocaleString()} {allItems.length === 1 ? 'title' : 'titles'}
+              {formatShowingCount(allItems.length, data?.pages?.[0]?.total_results)}
             </span>
           )}
         </div>

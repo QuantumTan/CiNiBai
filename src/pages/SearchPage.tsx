@@ -13,7 +13,7 @@ import { getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
 import {
   trimQuery,
   filterOutPersons,
-  formatResultCount,
+  formatShowingCount,
   getMediaTitle,
   getMediaType,
   getMediaDate,
@@ -105,6 +105,9 @@ export function SearchPage() {
   const handleSelectLiveSuggestion = (item: (typeof liveSuggestions)[number]) => {
     const itemTitle = getMediaTitle(item);
     const mediaType = getMediaType(item);
+    if (mediaType === 'person' || (item as { media_type?: string }).media_type === 'person') {
+      return;
+    }
     addRecentSearch(itemTitle);
     setDropdownOpen(false);
     setActiveIndex(-1);
@@ -583,7 +586,7 @@ export function SearchPage() {
           <>
             <div className="mb-6 flex items-center justify-between">
               <p className="text-xs uppercase tracking-wider font-semibold text-text-secondary" aria-live="polite">
-                {formatResultCount(results.length)}
+                {formatShowingCount(results.length, data?.pages?.[0]?.total_results)}
               </p>
             </div>
 

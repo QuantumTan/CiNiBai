@@ -66,7 +66,8 @@ export function CinematicHero({ items }: CinematicHeroProps) {
     return <HeroSkeleton />;
   }
 
-  const type = getMediaType(currentItem);
+  const rawMediaType = getMediaType(currentItem);
+  const type: 'movie' | 'tv' = rawMediaType === 'tv' ? 'tv' : 'movie';
   const title = getMediaTitle(currentItem);
   const year = getYear(getMediaDate(currentItem));
   const overview = currentItem.overview || '';

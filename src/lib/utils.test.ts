@@ -8,6 +8,7 @@ import {
   formatRuntime,
   formatRating,
   formatDate,
+  formatShowingCount,
 } from './utils';
 
 describe('src/lib/utils.ts', () => {
@@ -40,14 +41,26 @@ describe('src/lib/utils.ts', () => {
       expect(getMediaType({ media_type: 'tv' })).toBe('tv');
     });
 
-    it('defaults to "movie" for person results (never "tv")', () => {
-      expect(getMediaType({ media_type: 'person' })).toBe('movie');
+    it('returns "person" for person results (never "tv")', () => {
+      expect(getMediaType({ media_type: 'person' })).toBe('person');
     });
 
     it('defaults to "movie" when media_type is undefined or empty', () => {
       expect(getMediaType({})).toBe('movie');
       expect(getMediaType({ media_type: undefined })).toBe('movie');
       expect(getMediaType({ media_type: '' })).toBe('movie');
+    });
+  });
+
+  describe('formatShowingCount()', () => {
+    it('formats loaded and total with commas when totalResults is known', () => {
+      expect(formatShowingCount(20, 1234)).toBe('Showing 20 of 1,234');
+    });
+
+    it('formats only loaded count when totalResults is missing or 0', () => {
+      expect(formatShowingCount(20)).toBe('Showing 20');
+      expect(formatShowingCount(20, 0)).toBe('Showing 20');
+      expect(formatShowingCount(20, null)).toBe('Showing 20');
     });
   });
 

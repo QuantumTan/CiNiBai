@@ -8,6 +8,8 @@ import { SEO } from '../components/common/SEO';
 import { useDiscoverTVShows, useDiscoverMovies } from '../hooks/useTMDB';
 import { useAmbientStore } from '../stores/ambient';
 import { WATCH_PROVIDER_IDS, WATCH_REGION, getTMDBErrorMessage } from '../api/tmdb';
+import { NETWORK_BRAND_COLORS } from '../lib/constants';
+import { formatShowingCount } from '../lib/utils';
 import type { RGBColor } from '../lib/color';
 
 interface NetworkConfig {
@@ -19,13 +21,13 @@ interface NetworkConfig {
 
 // Single source of truth for platform identity & branding colors
 const NETWORKS: Record<string, NetworkConfig> = {
-  netflix: { name: 'Netflix', id: WATCH_PROVIDER_IDS.NETFLIX, colorClass: 'text-[#E50914]', rgb: { r: 229, g: 9, b: 20 } },
-  prime: { name: 'Amazon Prime', id: WATCH_PROVIDER_IDS.PRIME_VIDEO, colorClass: 'text-[#00A8E1]', rgb: { r: 0, g: 168, b: 225 } },
-  disney: { name: 'Disney+', id: WATCH_PROVIDER_IDS.DISNEY_PLUS, colorClass: 'text-[#3070F7]', rgb: { r: 48, g: 112, b: 247 } },
-  apple: { name: 'Apple TV+', id: WATCH_PROVIDER_IDS.APPLE_TV, colorClass: 'text-text-primary', rgb: { r: 200, g: 205, b: 215 } },
-  hulu: { name: 'Hulu', id: WATCH_PROVIDER_IDS.HULU, colorClass: 'text-[#1CE783]', rgb: { r: 28, g: 231, b: 131 } },
-  hbo: { name: 'HBO Max', id: WATCH_PROVIDER_IDS.HBO_MAX, colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } },
-  max: { name: 'HBO Max', id: WATCH_PROVIDER_IDS.HBO_MAX, colorClass: 'text-[#9900FF]', rgb: { r: 153, g: 0, b: 255 } }, // Alias pointing to merged HBO Max
+  netflix: { name: 'Netflix', id: WATCH_PROVIDER_IDS.NETFLIX, ...NETWORK_BRAND_COLORS.netflix },
+  prime: { name: 'Amazon Prime', id: WATCH_PROVIDER_IDS.PRIME_VIDEO, ...NETWORK_BRAND_COLORS.prime },
+  disney: { name: 'Disney+', id: WATCH_PROVIDER_IDS.DISNEY_PLUS, ...NETWORK_BRAND_COLORS.disney },
+  apple: { name: 'Apple TV+', id: WATCH_PROVIDER_IDS.APPLE_TV, ...NETWORK_BRAND_COLORS.apple },
+  hulu: { name: 'Hulu', id: WATCH_PROVIDER_IDS.HULU, ...NETWORK_BRAND_COLORS.hulu },
+  hbo: { name: 'HBO', id: WATCH_PROVIDER_IDS.HBO, ...NETWORK_BRAND_COLORS.hbo },
+  max: { name: 'Max', id: WATCH_PROVIDER_IDS.MAX, ...NETWORK_BRAND_COLORS.max },
 };
 
 // Date calculation for latest releases (last 18 months)
@@ -82,7 +84,7 @@ export function NetworkPage() {
 
   const queryParams = getQueryParams();
 
-  // Call only the needed discover hook using the enabled flag (no sentinel { page: -1 })
+  // Call only the active discover hook using the enabled flag
   const tvQuery = useDiscoverTVShows(queryParams, mediaType === 'tv' && !!networkData);
   const movieQuery = useDiscoverMovies(queryParams, mediaType === 'movie' && !!networkData);
 
@@ -241,9 +243,7 @@ export function NetworkPage() {
 
         {allItems.length > 0 && !isLoading && (
           <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider" aria-live="polite">
-            {data?.pages?.[0]?.total_results
-              ? `${data.pages[0].total_results.toLocaleString()} titles available`
-              : `Showing ${allItems.length.toLocaleString()} loaded`}
+            {formatShowingCount(allItems.length, data?.pages?.[0]?.total_results)}
           </span>
         )}
       </div>

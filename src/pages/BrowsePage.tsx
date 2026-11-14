@@ -9,6 +9,7 @@ import { useDiscoverMovies, useDiscoverTVShows, useMovieGenres, useTVGenres } fr
 import { useAmbientStore } from '../stores/ambient';
 import { getPosterUrl, getTMDBErrorMessage } from '../api/tmdb';
 import { buildBrowseDiscoverParams } from '../lib/browseFilters';
+import { formatShowingCount } from '../lib/utils';
 
 interface BrowsePageProps {
   mediaType: 'movie' | 'tv';
@@ -74,8 +75,8 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
   const hasActiveFilters =
     selectedGenre !== null || minRating !== '' || selectedYear !== '' || sortBy !== 'popularity.desc';
 
-  const { data: movieGenres } = useMovieGenres();
-  const { data: tvGenres } = useTVGenres();
+  const { data: movieGenres } = useMovieGenres(mediaType === 'movie');
+  const { data: tvGenres } = useTVGenres(mediaType === 'tv');
   const genres = mediaType === 'movie' ? movieGenres?.genres : tvGenres?.genres;
 
   const params = buildBrowseDiscoverParams({
@@ -179,7 +180,7 @@ export function BrowsePage({ mediaType }: BrowsePageProps) {
           </p>
           {allItems.length > 0 && !isLoading && (
             <span className="text-xs font-medium text-text-secondary">
-              Showing {allItems.length} titles
+              {formatShowingCount(allItems.length, query.data?.pages?.[0]?.total_results)}
             </span>
           )}
         </div>

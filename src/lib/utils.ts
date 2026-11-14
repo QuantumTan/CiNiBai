@@ -79,10 +79,11 @@ export function getMediaDate(item: { release_date?: string; first_air_date?: str
 }
 
 /**
- * Determine if a media item is a movie or TV show using explicit media_type.
- * Person and unspecified items default to 'movie', never 'tv'.
+ * Determine if a media item is a movie, TV show, or person using explicit media_type.
+ * Person media items return 'person', never 'tv'. Unspecified items default to 'movie', never 'tv'.
  */
-export function getMediaType(item: { media_type?: string }): 'movie' | 'tv' {
+export function getMediaType(item: { media_type?: string }): 'movie' | 'tv' | 'person' {
+  if (item.media_type === 'person') return 'person';
   if (item.media_type === 'tv') return 'tv';
   if (item.media_type === 'movie') return 'movie';
   return 'movie';
@@ -119,6 +120,19 @@ export function filterOutPersons<T extends { media_type?: string }>(
 export function formatResultCount(count: number): string {
   const safeCount = Math.max(0, count);
   return `${safeCount.toLocaleString()} ${safeCount === 1 ? 'result' : 'results'}`;
+}
+
+/**
+ * Format showing count text:
+ * When totalResults is known (positive number), outputs "Showing {loaded} of {total_results}" with locale formatting.
+ * When totalResults is unknown or undefined, outputs "Showing {loaded}".
+ */
+export function formatShowingCount(loaded: number, totalResults?: number | null): string {
+  const safeLoaded = Math.max(0, loaded);
+  if (typeof totalResults === 'number' && totalResults > 0) {
+    return `Showing ${safeLoaded.toLocaleString()} of ${totalResults.toLocaleString()}`;
+  }
+  return `Showing ${safeLoaded.toLocaleString()}`;
 }
 
 /**

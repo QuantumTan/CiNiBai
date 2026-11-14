@@ -221,19 +221,21 @@ export function useInfiniteSearchMulti(query: string, delay: number = 300) {
 }
 
 // --- Genres ---
-export function useMovieGenres() {
+export function useMovieGenres(enabled: boolean = true) {
   return useQuery({
     queryKey: ['genres', 'movie'],
     queryFn: getMovieGenres,
     staleTime: STALE_TIMES.genres,
+    enabled,
   });
 }
 
-export function useTVGenres() {
+export function useTVGenres(enabled: boolean = true) {
   return useQuery({
     queryKey: ['genres', 'tv'],
     queryFn: getTVGenres,
     staleTime: STALE_TIMES.genres,
+    enabled,
   });
 }
 

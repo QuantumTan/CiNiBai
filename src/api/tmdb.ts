@@ -10,27 +10,20 @@ import type {
   TMDBWatchProvidersResponse,
   DiscoverParams,
 } from './tmdb.types';
-import { REGION } from '../lib/constants';
+import { REGION, ANIME_GENRE_ID, ANIME_ORIGINAL_LANGUAGE, WATCH_PROVIDER_IDS } from '../lib/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
-// Named constants for anime curation and catalog queries
-export const ANIME_GENRE_ID = '16';
-export const JAPANESE_LANG = 'ja';
+// Named constants for anime curation and catalog queries (re-exported from constants)
+export { ANIME_GENRE_ID, ANIME_ORIGINAL_LANGUAGE };
+export const JAPANESE_LANG = ANIME_ORIGINAL_LANGUAGE;
 
 // Default region for streaming providers (re-exported from constants)
 export const WATCH_REGION = REGION;
 
-// TMDB Watch Provider IDs
-export const WATCH_PROVIDER_IDS = {
-  NETFLIX: '8',
-  PRIME_VIDEO: '9|119',
-  DISNEY_PLUS: '337',
-  HULU: '15',
-  APPLE_TV: '350',
-  HBO_MAX: '1899', // Merged HBO Max provider ID
-} as const;
+// TMDB Watch Provider IDs (re-exported from constants)
+export { WATCH_PROVIDER_IDS };
 
 export function getTMDBErrorMessage(error: unknown): string {
   if (!error) return 'TMDB request failed';

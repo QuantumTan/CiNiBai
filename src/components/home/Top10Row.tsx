@@ -148,7 +148,8 @@ export function Top10Row({ title, items, isLoading }: Top10RowProps) {
                 </div>
               ))
             : top10.map((item, index) => {
-                const mediaType = getMediaType(item);
+                const rawMediaType = getMediaType(item);
+                const mediaType = rawMediaType === 'tv' ? 'tv' : 'movie';
                 const itemTitle = getMediaTitle(item);
                 const releaseYear = getYear(getMediaDate(item));
                 const rating = item.vote_average ?? 0;
