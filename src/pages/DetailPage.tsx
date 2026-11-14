@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ExternalLink, Tv } from 'lucide-react';
+import { Play, Plus, Check, Calendar, Clock, ArrowLeft, X, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ExternalLink, Tv, Share2, Link2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMovieDetails, useTVDetails, useTVSeasonDetails, useWatchProviders } from '../hooks/useTMDB';
 import { getBackdropUrl, getPosterUrl, getLogoUrl, getTMDBErrorMessage } from '../api/tmdb';
@@ -85,6 +85,8 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
   const [showTrailer, setShowTrailer] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<'idle' | 'copied' | 'error'>('idle');
+  const shareTimeoutRef = useRef<number | null>(null);
   const trailerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -121,6 +123,14 @@ export function DetailPage({ mediaType }: DetailPageProps) {
 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showTrailer]);
+
+  useEffect(() => {
+    return () => {
+      if (shareTimeoutRef.current !== null) {
+        window.clearTimeout(shareTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (isLoading) return <DetailPageSkeleton />;
 
@@ -194,6 +204,62 @@ export function DetailPage({ mediaType }: DetailPageProps) {
         voteAverage: rating || 0,
         releaseDate: mediaType === 'movie' ? movie?.release_date || '' : tv?.first_air_date || '',
       });
+    }
+  };
+
+  const canonicalUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/${mediaType}/${numericId}`
+      : `/${mediaType}/${numericId}`;
+
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const copyCanonicalUrl = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(canonicalUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = canonicalUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error('Copy failed');
+      }
+      setShareFeedback('copied');
+    } catch {
+      setShareFeedback('error');
+    }
+
+    if (shareTimeoutRef.current !== null) {
+      window.clearTimeout(shareTimeoutRef.current);
+    }
+    shareTimeoutRef.current = window.setTimeout(() => {
+      setShareFeedback('idle');
+    }, 2500);
+  };
+
+  const handleNativeShare = async () => {
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+      await copyCanonicalUrl();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: title ? `${title} - CineBai` : 'CineBai',
+        text: overview || undefined,
+        url: canonicalUrl,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      await copyCanonicalUrl();
     }
   };
 
@@ -436,6 +502,50 @@ export function DetailPage({ mediaType }: DetailPageProps) {
               >
                 {inWatchlist ? <Check size={18} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}
               </button>
+
+              <button
+                type="button"
+                onClick={copyCanonicalUrl}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-border-default bg-black/60 px-4 text-xs font-semibold text-text-primary hover:border-border-strong hover:bg-white/10 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Copy link to this title"
+              >
+                {shareFeedback === 'copied' ? (
+                  <>
+                    <Check size={16} className="text-success" aria-hidden="true" />
+                    <span>Link Copied</span>
+                  </>
+                ) : shareFeedback === 'error' ? (
+                  <>
+                    <Link2 size={16} className="text-error" aria-hidden="true" />
+                    <span>Copy Failed</span>
+                  </>
+                ) : (
+                  <>
+                    <Link2 size={16} aria-hidden="true" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+
+              {canNativeShare && (
+                <button
+                  type="button"
+                  onClick={handleNativeShare}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-border-default bg-black/60 px-4 text-xs font-semibold text-text-primary hover:border-border-strong hover:bg-white/10 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label="Share this title"
+                >
+                  <Share2 size={16} aria-hidden="true" />
+                  <span>Share</span>
+                </button>
+              )}
+
+              <span className="sr-only" aria-live="polite">
+                {shareFeedback === 'copied'
+                  ? 'Link copied to clipboard'
+                  : shareFeedback === 'error'
+                  ? 'Unable to copy link'
+                  : ''}
+              </span>
             </div>
           </div>
         </div>
