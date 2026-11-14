@@ -4,7 +4,9 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { CinematicHero } from '../components/home/CinematicHero';
 import { ContentRow } from '../components/home/ContentRow';
 import { Top10Row } from '../components/home/Top10Row';
+import { ContentRowSkeleton } from '../components/ui/Skeleton';
 import { SEO } from '../components/common/SEO';
+import { useRailIntersection } from '../hooks/useRailIntersection';
 import { getTMDBErrorMessage } from '../api/tmdb';
 import type { TMDBMovie, TMDBTVShow } from '../api/tmdb.types';
 import { useRecentlyViewedStore } from '../stores/recentlyViewedStore';
@@ -117,6 +119,43 @@ function HomeRail({
   );
 }
 
+interface DeferredHomeRailProps {
+  title: string;
+  useRailQuery: (enabled?: boolean) => {
+    data?: { results: (TMDBMovie | TMDBTVShow)[] };
+    isLoading: boolean;
+    isError: boolean;
+    isFetching: boolean;
+    error: unknown;
+    refetch: () => void;
+  };
+  seeMoreLink?: string;
+}
+
+function DeferredHomeRail({ title, useRailQuery, seeMoreLink }: DeferredHomeRailProps) {
+  const { ref, isVisible } = useRailIntersection('150px 0px');
+  const { data, isLoading, isError, isFetching, error, refetch } = useRailQuery(isVisible);
+
+  return (
+    <div ref={ref}>
+      {!isVisible ? (
+        <ContentRowSkeleton />
+      ) : (
+        <HomeRail
+          title={title}
+          items={data?.results}
+          isLoading={isLoading}
+          isError={isError}
+          isFetching={isFetching}
+          error={error}
+          refetch={refetch}
+          seeMoreLink={seeMoreLink}
+        />
+      )}
+    </div>
+  );
+}
+
 export function HomePage() {
   const recentlyViewed = useRecentlyViewedStore((s) => s.items);
   const recentlyViewedMedia = useMemo<(TMDBMovie | TMDBTVShow)[]>(
@@ -160,17 +199,8 @@ export function HomePage() {
     [recentlyViewed]
   );
 
-  const { data: trending, isLoading: trendingLoading, isError: trendingError, isFetching: trendingFetching, error: trendingErr, refetch: refetchTrending } = useTrending('all', 'week');
+  const { data: trending, isError: trendingError, isFetching: trendingFetching, error: trendingErr, refetch: refetchTrending, isLoading: trendingLoading } = useTrending('all', 'week');
   const { data: trendingToday, isLoading: trendingTodayLoading, isError: trendingTodayError, isFetching: trendingTodayFetching, error: trendingTodayErr, refetch: refetchTrendingToday } = useTrendingToday();
-  const { data: popularMovies, isLoading: popularMoviesLoading, isError: popularMoviesError, isFetching: popularMoviesFetching, error: popularMoviesErr, refetch: refetchPopularMovies } = usePopularMovies();
-  const { data: nowPlaying, isLoading: nowPlayingLoading, isError: nowPlayingError, isFetching: nowPlayingFetching, error: nowPlayingErr, refetch: refetchNowPlaying } = useNowPlayingMovies();
-  const { data: netflix, isLoading: netflixLoading, isError: netflixError, isFetching: netflixFetching, error: netflixErr, refetch: refetchNetflix } = useNetflixOriginals();
-  const { data: prime, isLoading: primeLoading, isError: primeError, isFetching: primeFetching, error: primeErr, refetch: refetchPrime } = usePrimeOriginals();
-  const { data: disney, isLoading: disneyLoading, isError: disneyError, isFetching: disneyFetching, error: disneyErr, refetch: refetchDisney } = useDisneyOriginals();
-  const { data: hbo, isLoading: hboLoading, isError: hboError, isFetching: hboFetching, error: hboErr, refetch: refetchHbo } = useHBOMaxOriginals();
-  const { data: hulu, isLoading: huluLoading, isError: huluError, isFetching: huluFetching, error: huluErr, refetch: refetchHulu } = useHuluOriginals();
-  const { data: apple, isLoading: appleLoading, isError: appleError, isFetching: appleFetching, error: appleErr, refetch: refetchApple } = useAppleTVOriginals();
-  const { data: anime, isLoading: animeLoading, isError: animeError, isFetching: animeFetching, error: animeErr, refetch: refetchAnime } = useAnime();
 
   // Filter items with backdrops for the cinematic hero
   const heroItems = trending?.results.filter((item) => item.backdrop_path) || [];
@@ -312,102 +342,57 @@ export function HomePage() {
           seeMoreLink="/movies"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on Apple TV+"
-          items={apple?.results}
-          isLoading={appleLoading}
-          isError={appleError}
-          isFetching={appleFetching}
-          error={appleErr}
-          refetch={refetchApple}
+          useRailQuery={useAppleTVOriginals}
           seeMoreLink="/network/apple"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on Netflix"
-          items={netflix?.results}
-          isLoading={netflixLoading}
-          isError={netflixError}
-          isFetching={netflixFetching}
-          error={netflixErr}
-          refetch={refetchNetflix}
+          useRailQuery={useNetflixOriginals}
           seeMoreLink="/network/netflix"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on HBO Max"
-          items={hbo?.results}
-          isLoading={hboLoading}
-          isError={hboError}
-          isFetching={hboFetching}
-          error={hboErr}
-          refetch={refetchHbo}
+          useRailQuery={useHBOMaxOriginals}
           seeMoreLink="/network/hbo"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on Prime Video"
-          items={prime?.results}
-          isLoading={primeLoading}
-          isError={primeError}
-          isFetching={primeFetching}
-          error={primeErr}
-          refetch={refetchPrime}
+          useRailQuery={usePrimeOriginals}
           seeMoreLink="/network/prime"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on Disney+"
-          items={disney?.results}
-          isLoading={disneyLoading}
-          isError={disneyError}
-          isFetching={disneyFetching}
-          error={disneyErr}
-          refetch={refetchDisney}
+          useRailQuery={useDisneyOriginals}
           seeMoreLink="/network/disney"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Anime Showcase"
-          items={anime?.results}
-          isLoading={animeLoading}
-          isError={animeError}
-          isFetching={animeFetching}
-          error={animeErr}
-          refetch={refetchAnime}
+          useRailQuery={useAnime}
           seeMoreLink="/anime"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Streaming on Hulu"
-          items={hulu?.results}
-          isLoading={huluLoading}
-          isError={huluError}
-          isFetching={huluFetching}
-          error={huluErr}
-          refetch={refetchHulu}
+          useRailQuery={useHuluOriginals}
           seeMoreLink="/network/hulu"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="Popular Movies"
-          items={popularMovies?.results}
-          isLoading={popularMoviesLoading}
-          isError={popularMoviesError}
-          isFetching={popularMoviesFetching}
-          error={popularMoviesErr}
-          refetch={refetchPopularMovies}
+          useRailQuery={usePopularMovies}
           seeMoreLink="/movies"
         />
 
-        <HomeRail
+        <DeferredHomeRail
           title="In Theaters"
-          items={nowPlaying?.results}
-          isLoading={nowPlayingLoading}
-          isError={nowPlayingError}
-          isFetching={nowPlayingFetching}
-          error={nowPlayingErr}
-          refetch={refetchNowPlaying}
+          useRailQuery={useNowPlayingMovies}
           seeMoreLink="/movies"
         />
       </div>

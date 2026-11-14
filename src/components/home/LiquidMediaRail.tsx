@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { MovieCard } from '../cards/MovieCard';
 import { ContentRowSkeleton } from '../ui/Skeleton';
+import { useRailIntersection } from '../../hooks/useRailIntersection';
 import type { TMDBMovie, TMDBTVShow } from '../../api/tmdb.types';
 
 export interface LiquidMediaRailProps {
@@ -10,12 +11,28 @@ export interface LiquidMediaRailProps {
   items: (TMDBMovie | TMDBTVShow)[] | undefined;
   isLoading?: boolean;
   seeMoreLink?: string;
+  lazyMount?: boolean;
+  onVisible?: () => void;
 }
 
-export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: LiquidMediaRailProps) {
+export function LiquidMediaRail({
+  title,
+  items,
+  isLoading,
+  seeMoreLink,
+  lazyMount = false,
+  onVisible,
+}: LiquidMediaRailProps) {
+  const { ref: lazyRef, isVisible } = useRailIntersection('150px 0px', !lazyMount);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  useEffect(() => {
+    if (lazyMount && isVisible) {
+      onVisible?.();
+    }
+  }, [lazyMount, isVisible, onVisible]);
 
   const checkScrollState = () => {
     const el = scrollRef.current;
@@ -25,6 +42,7 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
   };
 
   useEffect(() => {
+    if (!isVisible) return;
     const el = scrollRef.current;
     if (!el) return;
     checkScrollState();
@@ -34,7 +52,7 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
       el.removeEventListener('scroll', checkScrollState);
       window.removeEventListener('resize', checkScrollState);
     };
-  }, [items]);
+  }, [items, isVisible]);
 
   const handleScroll = (direction: 'left' | 'right') => {
     const el = scrollRef.current;
@@ -53,6 +71,14 @@ export function LiquidMediaRail({ title, items, isLoading, seeMoreLink }: Liquid
       handleScroll('left');
     }
   };
+
+  if (lazyMount && !isVisible) {
+    return (
+      <div ref={lazyRef}>
+        <ContentRowSkeleton />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <ContentRowSkeleton />;

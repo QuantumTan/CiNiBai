@@ -25,44 +25,53 @@ import { STALE_TIMES } from '../lib/constants';
 import { useDebounce } from './useDebounce';
 
 // --- Trending ---
-export function useTrending(mediaType: 'all' | 'movie' | 'tv' = 'all', timeWindow: 'day' | 'week' = 'week') {
+export function useTrending(
+  mediaType: 'all' | 'movie' | 'tv' = 'all',
+  timeWindow: 'day' | 'week' = 'week',
+  enabled = true,
+) {
   return useQuery({
     queryKey: ['trending', mediaType, timeWindow],
     queryFn: () => getTrending(mediaType, timeWindow),
     staleTime: STALE_TIMES.trending,
+    enabled,
   });
 }
 
 // --- Movies ---
-export function usePopularMovies() {
+export function usePopularMovies(enabled = true) {
   return useQuery({
     queryKey: ['movies', 'popular'],
     queryFn: () => getPopularMovies(),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useTopRatedMovies() {
+export function useTopRatedMovies(enabled = true) {
   return useQuery({
     queryKey: ['movies', 'topRated'],
     queryFn: () => getTopRatedMovies(),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useNowPlayingMovies() {
+export function useNowPlayingMovies(enabled = true) {
   return useQuery({
     queryKey: ['movies', 'nowPlaying'],
     queryFn: () => getNowPlayingMovies(),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useTrendingToday() {
+export function useTrendingToday(enabled = true) {
   return useQuery({
     queryKey: ['trending', 'all', 'day'],
     queryFn: () => getTrending('all', 'day'),
     staleTime: STALE_TIMES.trending,
+    enabled,
   });
 }
 
@@ -71,55 +80,61 @@ const oneYearAgo = new Date();
 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 const recentDateStr = oneYearAgo.toISOString().split('T')[0];
 
-export function useNetflixOriginals() {
+export function useNetflixOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'netflix', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.NETFLIX, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function usePrimeOriginals() {
+export function usePrimeOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'prime', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.PRIME_VIDEO, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useDisneyOriginals() {
+export function useDisneyOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'disney', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.DISNEY_PLUS, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useHuluOriginals() {
+export function useHuluOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'hulu', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.HULU, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useAppleTVOriginals() {
+export function useAppleTVOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'apple', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.APPLE_TV, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useHBOMaxOriginals() {
+export function useHBOMaxOriginals(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'hbo', 'recent'],
     queryFn: () => discoverTVShows({ with_watch_providers: WATCH_PROVIDER_IDS.HBO_MAX, watch_region: WATCH_REGION, sort_by: 'popularity.desc', 'first_air_date.gte': recentDateStr }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
-export function useAnime() {
+export function useAnime(enabled = true) {
   return useQuery({
     queryKey: ['tv', 'anime'],
     queryFn: () => discoverTVShows({ 
@@ -128,6 +143,7 @@ export function useAnime() {
       sort_by: 'popularity.desc' 
     }),
     staleTime: STALE_TIMES.popular,
+    enabled,
   });
 }
 
